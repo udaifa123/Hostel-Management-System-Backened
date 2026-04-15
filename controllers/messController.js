@@ -21,7 +21,6 @@ export const getMenu = async (req, res) => {
     let menu = await Menu.findOne({ hostel: warden.hostel._id });
 
     if (!menu) {
-      // Create default menu if none exists
       const defaultMenu = {
         monday: { breakfast: '', lunch: '', snacks: '', dinner: '' },
         tuesday: { breakfast: '', lunch: '', snacks: '', dinner: '' },
@@ -79,11 +78,9 @@ export const updateMenu = async (req, res) => {
       });
     }
 
-    // Track changes for history
     const changes = [];
 
     if (meal === 'all') {
-      // Update entire day
       const oldDayMenu = menu.menu[day] || {};
       Object.keys(updatedMenuData).forEach(mealType => {
         if (oldDayMenu[mealType] !== updatedMenuData[mealType]) {
@@ -97,7 +94,6 @@ export const updateMenu = async (req, res) => {
       });
       menu.menu[day] = updatedMenuData;
     } else {
-      // Update single meal
       if (!menu.menu[day]) menu.menu[day] = {};
       const oldValue = menu.menu[day][meal] || '';
       
@@ -117,7 +113,6 @@ export const updateMenu = async (req, res) => {
     menu.updatedAt = Date.now();
     await menu.save();
 
-    // Save to history
     if (changes.length > 0) {
       await MenuHistory.create({
         hostel: warden.hostel._id,
@@ -175,13 +170,11 @@ export const copyMenu = async (req, res) => {
       });
     }
 
-    // Copy menu
     menu.menu[targetDay] = { ...sourceMenu };
     menu.updatedBy = req.user.id;
     menu.updatedAt = Date.now();
     await menu.save();
 
-    // Save to history
     await MenuHistory.create({
       hostel: warden.hostel._id,
       changes: [{
@@ -236,13 +229,11 @@ export const clearDay = async (req, res) => {
 
     const oldMenu = menu.menu[day] || {};
 
-    // Clear day menu
     menu.menu[day] = { breakfast: '', lunch: '', snacks: '', dinner: '' };
     menu.updatedBy = req.user.id;
     menu.updatedAt = Date.now();
     await menu.save();
 
-    // Save to history
     const changes = Object.keys(oldMenu).map(meal => ({
       day,
       meal,
@@ -353,112 +344,115 @@ export const updateTimings = async (req, res) => {
   }
 };
 
-
-
-
-// @desc    Get weekly menu for parents
-// @route   GET /api/mess/parent/menu
+// ✅ FIXED - Get weekly menu for parents
 export const getWeeklyMenu = async (req, res) => {
   try {
-    // 🔥 Get parent with students
-    let parent = await Parent.findOne({ user: req.user._id })
+    console.log("🍽️ Parent fetching weekly menu...");
+    console.log("User ID:", req.user._id);
+    
+    // Get parent with students
+    const parent = await Parent.findOne({ user: req.user._id })
       .populate({
         path: "students",
         populate: { path: "hostel" }
       });
 
-    // ❗ AUTO FIX: If no students linked → find by parentPhone
-    if (!parent || parent.students.length === 0) {
+    console.log("Parent found:", parent ? "Yes" : "No");
+    console.log("Students count:", parent?.students?.length || 0);
 
-      const student = await Student.findOne({
-        parentPhone: req.user.phone
-      }).populate("hostel");
-
-      if (student) {
-        // 🔥 Auto link student to parent
-        parent = await Parent.findOneAndUpdate(
-          { user: req.user._id },
-          { $addToSet: { students: student._id } },
-          { new: true }
-        ).populate({
-          path: "students",
-          populate: { path: "hostel" }
-        });
-      }
+    if (!parent || !parent.students || parent.students.length === 0) {
+      console.log("No students linked to parent");
+      return res.json({ 
+        success: true, 
+        data: [],
+        message: "No students linked to your account"
+      });
     }
 
-    if (!parent || parent.students.length === 0) {
-      return res.json({ success: true, data: [] });
-    }
-
-    const hostelId = parent.students[0]?.hostel?._id;
+    // Get hostel from first student
+    const firstStudent = parent.students[0];
+    const hostelId = firstStudent.hostel?._id;
 
     if (!hostelId) {
-      return res.json({ success: true, data: [] });
+      console.log("No hostel found for student");
+      return res.json({ 
+        success: true, 
+        data: [],
+        message: "Hostel not assigned"
+      });
     }
 
+    console.log("Hostel ID:", hostelId);
+
+    // Get menu for this hostel
     const menu = await Menu.findOne({ hostel: hostelId });
 
-    if (!menu) {
-      return res.json({ success: true, data: [] });
+    if (!menu || !menu.menu) {
+      console.log("No menu found for hostel");
+      return res.json({ 
+        success: true, 
+        data: [],
+        message: "Menu not configured yet"
+      });
     }
 
-    const weeklyMenu = Object.keys(menu.menu).map(day => ({
+    console.log("Menu found, days:", Object.keys(menu.menu));
+
+    // Transform menu for frontend
+    const weekDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const weeklyMenu = weekDays.map(day => ({
       day: day.charAt(0).toUpperCase() + day.slice(1),
-      meals: menu.menu[day],
-      special: menu.menu[day]?.special || ''
+      meals: menu.menu[day] || { breakfast: '', lunch: '', snacks: '', dinner: '' }
     }));
 
+    console.log(`✅ Returning ${weeklyMenu.length} days menu`);
+    
     res.json({
       success: true,
       data: weeklyMenu
     });
 
   } catch (error) {
-    console.error("Menu error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    console.error("❌ Menu error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      data: []
+    });
   }
 };
 
-
-
-
+// ✅ FIXED - Get meal timings for parents
 export const getParentTimings = async (req, res) => {
   try {
-    let parent = await Parent.findOne({ user: req.user._id })
+    console.log("⏰ Parent fetching timings...");
+    
+    const parent = await Parent.findOne({ user: req.user._id })
       .populate({
         path: "students",
         populate: { path: "hostel" }
       });
 
-    if (!parent || parent.students.length === 0) {
-      const student = await Student.findOne({
-        parentPhone: req.user.phone
-      }).populate("hostel");
-
-      if (student) {
-        parent = await Parent.findOneAndUpdate(
-          { user: req.user._id },
-          { $addToSet: { students: student._id } },
-          { new: true }
-        ).populate({
-          path: "students",
-          populate: { path: "hostel" }
-        });
-      }
+    if (!parent || !parent.students || parent.students.length === 0) {
+      return res.json({ 
+        success: true, 
+        data: { breakfast: "7:00 AM", lunch: "12:30 PM", snacks: "4:00 PM", dinner: "7:30 PM" }
+      });
     }
 
-    const hostelId = parent?.students[0]?.hostel?._id;
-
+    const hostelId = parent.students[0]?.hostel?._id;
     const menu = await Menu.findOne({ hostel: hostelId });
 
     res.json({
       success: true,
-      data: menu?.timings || {}
+      data: menu?.timings || { breakfast: "7:00 AM", lunch: "12:30 PM", snacks: "4:00 PM", dinner: "7:30 PM" }
     });
 
   } catch (error) {
     console.error("Timing error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };

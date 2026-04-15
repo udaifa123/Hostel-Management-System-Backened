@@ -127,16 +127,16 @@ const visitRequestSchema = new mongoose.Schema({
 });
 
 // Generate gate pass ID only when approved
-visitRequestSchema.pre('save', function(next) {
+visitRequestSchema.pre('save', function() {
   if (this.status === 'approved' && !this.gatePassId) {
     const date = new Date();
     const year = date.getFullYear().toString().slice(-2);
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const day = date.getDate().toString().padStart(2, '0');
     const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+
     this.gatePassId = `GP${year}${month}${day}${random}`;
   }
-  next();
 });
 
 // Drop the problematic index if it exists

@@ -7,14 +7,11 @@ import Room from "../models/Room.js";
 import Leave from "../models/Leave.js";
 import VisitRequest from "../models/VisitRequest.js";
 import Message from "../models/Message.js";
+import Parent from "../models/Parent.js";  // ✅ ADD THIS LINE - FIXES "Parent is not defined" ERROR
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 // ==================== DASHBOARD ====================
-
-// @desc    Get warden dashboard
-// @route   GET /api/warden/dashboard
-// In wardenController.js, update getWardenDashboard function
 
 export const getWardenDashboard = async (req, res) => {
   try {
@@ -108,17 +105,14 @@ export const getWardenDashboard = async (req, res) => {
 
 // ==================== STUDENT MANAGEMENT ====================
 
-// @desc    Get all students in warden's hostel
-// @route   GET /api/warden/students
 export const getHostelStudents = async (req, res) => {
   try {
-
     const warden = await User.findById(req.user.id).populate("hostel");
 
     if (!warden.hostel) {
       return res.status(404).json({
-        success:false,
-        message:"No hostel assigned"
+        success: false,
+        message: "No hostel assigned"
       });
     }
 
@@ -130,37 +124,29 @@ export const getHostelStudents = async (req, res) => {
     .sort({ createdAt:-1 });
 
     res.json({
-      success:true,
-      students:students,
-      count:students.length
+      success: true,
+      students: students,
+      count: students.length
     });
-
   } catch (error) {
-
-    console.error("Error fetching students:",error);
-
+    console.error("Error fetching students:", error);
     res.status(500).json({
-      success:false,
-      message:error.message
+      success: false,
+      message: error.message
     });
-
   }
 };
 
 // ==================== CREATE STUDENT ====================
-// @desc    Create a new student
-// @route   POST /api/warden/students
-// @access  Private (Warden only)
 export const createStudent = async (req, res) => {
   try {
-
     const {
       name,
       email,
       password,
       phone,
-      parentPhone,
       address,
+      registrationNumber,
       rollNumber,
       course,
       branch,
@@ -168,9 +154,13 @@ export const createStudent = async (req, res) => {
       semester,
       batch,
       roomNumber,
-      block
+      block,
+      parents
     } = req.body;
 
+    console.log("📝 Creating student with parents:", parents);
+
+    // Validation
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
@@ -178,8 +168,8 @@ export const createStudent = async (req, res) => {
       });
     }
 
+    // Check if email already exists
     const existingUser = await User.findOne({ email });
-
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -187,9 +177,8 @@ export const createStudent = async (req, res) => {
       });
     }
 
-    // Get warden
+    // Get warden and hostel
     const warden = await User.findById(req.user.id).populate("hostel");
-
     if (!warden || !warden.hostel) {
       return res.status(400).json({
         success: false,
@@ -197,10 +186,10 @@ export const createStudent = async (req, res) => {
       });
     }
 
-    // Hash password
+    // Hash student password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create student user
     const user = await User.create({
       name,
       email,
@@ -210,18 +199,17 @@ export const createStudent = async (req, res) => {
       hostel: warden.hostel._id
     });
 
+    console.log("✅ Student user created:", user.email);
+
     // Room logic
     let room = null;
-
     if (roomNumber) {
-
       room = await Room.findOne({
         roomNumber,
         hostel: warden.hostel._id
       });
 
       if (!room) {
-
         room = await Room.create({
           roomNumber,
           block: block || "A",
@@ -229,71 +217,161 @@ export const createStudent = async (req, res) => {
           capacity: 3,
           occupants: []
         });
-
       }
 
       if (room.occupants.length >= room.capacity) {
-
         return res.status(400).json({
           success: false,
           message: "Room full"
         });
+      }
+    }
 
+    // Create student document
+    const student = await Student.create({
+      user: user._id,
+      registrationNumber: registrationNumber || `REG${Date.now()}`,
+      rollNumber: rollNumber || `ROLL${Date.now()}`,
+      course: course || "Not Assigned",
+      branch: branch || "Not Assigned",
+      year: year || 1,
+      semester: semester || 1,
+      batch: batch || new Date().getFullYear().toString(),
+      phone,
+      address: address || "",
+      hostel: warden.hostel._id,
+      room: room ? room._id : null,
+      roomNumber: roomNumber || null,
+      blockName: block || null,
+      parents: []
+    });
+
+    console.log("✅ Student document created:", student._id);
+
+    // Update room occupants
+    if (room) {
+      await Room.findByIdAndUpdate(room._id, {
+        $addToSet: { occupants: user._id }
+      });
+    }
+
+    // ========== CREATE PARENT ACCOUNTS AND LINK ==========
+    const createdParents = [];
+    const parentIds = [];
+
+    if (parents && parents.length > 0) {
+      console.log(`👨‍👩‍👧 Creating ${parents.length} parent(s)...`);
+      
+      for (const parent of parents) {
+        // Skip if no email provided
+        if (!parent.email) {
+          console.log(`⚠️ Skipping parent ${parent.name}: No email provided`);
+          continue;
+        }
+
+        console.log(`📧 Creating parent: ${parent.email}`);
+
+        // Use phone number as password
+        const parentPassword = parent.phone || `parent${Math.floor(Math.random() * 10000)}`;
+        const hashedParentPassword = await bcrypt.hash(parentPassword, 10);
+
+        // Check if parent user already exists
+        let parentUser = await User.findOne({ email: parent.email });
+        
+        if (!parentUser) {
+          // Create parent user
+          parentUser = await User.create({
+            name: parent.name,
+            email: parent.email,
+            password: hashedParentPassword,
+            role: "parent",
+            phone: parent.phone,
+            address: parent.address || "",
+            students: [student._id]
+          });
+
+          console.log(`✅ Parent user created: ${parentUser.email}`);
+          console.log(`🔐 Parent Password: ${parentPassword}`);
+
+          createdParents.push({
+            name: parent.name,
+            email: parent.email,
+            password: parentPassword,
+            relation: parent.relation,
+            phone: parent.phone
+          });
+        } else {
+          console.log(`📌 Parent already exists: ${parent.email}`);
+          // Add student to existing parent's students array
+          if (!parentUser.students) parentUser.students = [];
+          if (!parentUser.students.includes(student._id)) {
+            parentUser.students.push(student._id);
+            await parentUser.save();
+          }
+        }
+
+      // Create or update Parent model
+let parentProfile = await Parent.findOne({ user: parentUser._id });
+if (!parentProfile) {
+  parentProfile = await Parent.create({
+    user: parentUser._id,
+    phone: parent.phone,
+    students: [student._id],
+    relation: parent.relation || "",  // ✅ ADD THIS LINE
+    occupation: parent.occupation || "",
+    address: parent.address || "",
+    isPrimary: parent.isPrimary || false,
+    isEmergency: parent.emergencyContact || false
+  });
+  console.log(`✅ Parent profile created with relation: ${parent.relation || 'Not specified'}`);
+} else {
+  if (!parentProfile.students.includes(student._id)) {
+    parentProfile.students.push(student._id);
+    await parentProfile.save();
+  }
+}
+
+        parentIds.push(parentUser._id);
       }
 
+      // Update student with parent references
+      if (parentIds.length > 0) {
+        student.parents = parentIds;
+        await student.save();
+        console.log(`✅ Student linked to ${parentIds.length} parent(s)`);
+      }
     }
 
-    const student = await Student.create({
+    // Populate student data for response
+    const populatedStudent = await Student.findById(student._id)
+      .populate("user", "name email phone")
+      .populate("room", "roomNumber block");
 
-      user: user._id,
-      rollNumber,
-      course,
-      branch,
-      year,
-      semester,
-      batch,
-      phone,
-      parentPhone,
-      address,
-      hostel: warden.hostel._id,
-      room: room ? room._id : null
-
+    // Send response with parent login info
+    res.status(201).json({
+      success: true,
+      message: `Student created successfully with ${createdParents.length} parent(s) linked`,
+      student: populatedStudent,
+      parentLogins: createdParents.map(p => ({
+        name: p.name,
+        email: p.email,
+        password: p.password,
+        relation: p.relation,
+        message: `🔐 Parent Login - Email: ${p.email}, Password: ${p.password}`
+      }))
     });
-
-    if (room) {
-
-      await Room.findByIdAndUpdate(room._id,{
-        $addToSet:{ occupants: user._id }
-      });
-
-    }
-
-  const populatedStudent = await Student.findById(student._id)
-  .populate("user", "name email phone")
-  .populate("room", "roomNumber block");
-
-res.status(201).json({
-  success: true,
-  message: "Student created successfully",
-  student: populatedStudent
-});
 
   } catch (error) {
-
-    console.error("Create student error:",error);
-
+    console.error("❌ Create student error:", error);
     res.status(500).json({
-      success:false,
-      message:error.message
+      success: false,
+      message: error.message
     });
-
   }
 };
 
 // ==================== ATTENDANCE ====================
 
-// @desc    Mark attendance
-// @route   POST /api/warden/attendance
 export const markAttendance = async (req, res) => {
   try {
     const { studentId, status, remarks } = req.body;
@@ -301,7 +379,6 @@ export const markAttendance = async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Check if attendance already marked for today
     const existing = await Attendance.findOne({
       student: studentId,
       date: today
@@ -335,8 +412,6 @@ export const markAttendance = async (req, res) => {
   }
 };
 
-// @desc    Get attendance report
-// @route   GET /api/warden/attendance/report
 export const getAttendanceReport = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
@@ -373,55 +448,8 @@ export const getAttendanceReport = async (req, res) => {
   }
 };
 
-// ==================== COMPLAINTS ====================
-
-// @desc    Update complaint status
-// @route   PUT /api/warden/complaints/:id
-// export const updateComplaintStatus = async (req, res) => {
-//   try {
-//     const { status, response } = req.body;
-    
-//     const complaint = await Complaint.findByIdAndUpdate(
-//       req.params.id,
-//       { 
-//         status, 
-//         response,
-//         $push: { 
-//           timeline: { 
-//             status, 
-//             remark: response || `Status changed to ${status}`, 
-//             updatedBy: req.user.id,
-//             updatedAt: new Date()
-//           } 
-//         }
-//       },
-//       { new: true }
-//     ).populate('student');
-
-//     if (!complaint) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Complaint not found"
-//       });
-//     }
-
-//     res.json({
-//       success: true,
-//       data: complaint
-//     });
-//   } catch (error) {
-//     console.error("Error updating complaint:", error);
-//     res.status(500).json({ 
-//       success: false, 
-//       message: error.message 
-//     });
-//   }
-// };
-
 // ==================== LEAVE MANAGEMENT ====================
 
-// @desc    Get pending leaves
-// @route   GET /api/warden/leaves/pending
 export const getPendingLeaves = async (req, res) => {
   try {
     const warden = await User.findById(req.user.id).populate('hostel');
@@ -433,7 +461,6 @@ export const getPendingLeaves = async (req, res) => {
       });
     }
 
-    // Get all students in this hostel
     const students = await Student.find({ hostel: warden.hostel._id }).select('_id');
     const studentIds = students.map(s => s._id);
 
@@ -464,8 +491,6 @@ export const getPendingLeaves = async (req, res) => {
   }
 };
 
-// @desc    Approve leave
-// @route   PUT /api/warden/leaves/:id/approve
 export const approveLeave = async (req, res) => {
   try {
     const { remarks } = req.body;
@@ -495,7 +520,6 @@ export const approveLeave = async (req, res) => {
       });
     }
 
-    // Send notification to student
     try {
       const Notification = (await import('../models/Notification.js')).default;
       await Notification.create({
@@ -526,8 +550,6 @@ export const approveLeave = async (req, res) => {
   }
 };
 
-// @desc    Reject leave
-// @route   PUT /api/warden/leaves/:id/reject
 export const rejectLeave = async (req, res) => {
   try {
     const { remarks } = req.body;
@@ -564,7 +586,6 @@ export const rejectLeave = async (req, res) => {
       });
     }
 
-    // Send notification to student
     try {
       const Notification = (await import('../models/Notification.js')).default;
       await Notification.create({
@@ -597,11 +618,6 @@ export const rejectLeave = async (req, res) => {
 
 // ==================== VISITOR MANAGEMENT ====================
 
-// @desc    Get pending visitors
-// @route   GET /api/warden/visitors/pending
-// Add these to wardenController.js if not already present
-
-// @desc    Get pending visitors
 export const getPendingVisitors = async (req, res) => {
   try {
     const warden = await User.findById(req.user.id).populate('hostel');
@@ -643,7 +659,6 @@ export const getPendingVisitors = async (req, res) => {
   }
 };
 
-// @desc    Approve visitor
 export const approveVisitor = async (req, res) => {
   try {
     const { meetingLocation, remarks, timeSlot } = req.body;
@@ -675,7 +690,6 @@ export const approveVisitor = async (req, res) => {
       });
     }
 
-    // Send notification to student
     try {
       await Notification.create({
         recipient: visit.studentId.user._id,
@@ -691,7 +705,6 @@ export const approveVisitor = async (req, res) => {
       console.error('Notification error:', notifError);
     }
 
-    // Send notification to parent if parent created
     if (visit.parentId) {
       await Notification.create({
         recipient: visit.parentId,
@@ -719,7 +732,6 @@ export const approveVisitor = async (req, res) => {
   }
 };
 
-// @desc    Reject visitor
 export const rejectVisitor = async (req, res) => {
   try {
     const { remarks } = req.body;
@@ -756,7 +768,6 @@ export const rejectVisitor = async (req, res) => {
       });
     }
 
-    // Send notification to student
     try {
       await Notification.create({
         recipient: visit.studentId.user._id,
@@ -772,7 +783,6 @@ export const rejectVisitor = async (req, res) => {
       console.error('Notification error:', notifError);
     }
 
-    // Send notification to parent if parent created
     if (visit.parentId) {
       await Notification.create({
         recipient: visit.parentId,
@@ -800,7 +810,6 @@ export const rejectVisitor = async (req, res) => {
   }
 };
 
-// @desc    Get active visits (today's approved visits)
 export const getActiveVisits = async (req, res) => {
   try {
     const warden = await User.findById(req.user.id).populate('hostel');
@@ -848,7 +857,6 @@ export const getActiveVisits = async (req, res) => {
   }
 };
 
-// @desc    Check-in visitor
 export const checkinVisitor = async (req, res) => {
   try {
     const visit = await VisitRequest.findByIdAndUpdate(
@@ -876,7 +884,6 @@ export const checkinVisitor = async (req, res) => {
   }
 };
 
-// @desc    Check-out visitor
 export const checkoutVisitor = async (req, res) => {
   try {
     const visit = await VisitRequest.findByIdAndUpdate(
@@ -904,11 +911,8 @@ export const checkoutVisitor = async (req, res) => {
 
 // ==================== CHAT SYSTEM ====================
 
-// @desc    Get student messages
-// @route   GET /api/warden/messages/students
 export const getStudentMessages = async (req, res) => {
   try {
-    // Get all students in warden's hostel
     const warden = await User.findById(req.user.id).populate('hostel');
     
     if (!warden.hostel) {
@@ -924,7 +928,6 @@ export const getStudentMessages = async (req, res) => {
 
     const studentIds = students.map(s => s.user._id);
 
-    // Get latest messages with each student
     const messages = await Message.aggregate([
       {
         $match: {
@@ -972,8 +975,6 @@ export const getStudentMessages = async (req, res) => {
   }
 };
 
-// @desc    Send message to student
-// @route   POST /api/warden/messages/send
 export const sendMessageToStudent = async (req, res) => {
   try {
     const { studentId, content, attachments } = req.body;
@@ -989,7 +990,6 @@ export const sendMessageToStudent = async (req, res) => {
       .populate('sender', 'name role')
       .populate('receiver', 'name role');
 
-    // Send real-time notification via socket
     const io = req.app.get('io');
     if (io) {
       io.to(`user:${studentId}`).emit('new_message', populatedMessage);
@@ -1008,13 +1008,8 @@ export const sendMessageToStudent = async (req, res) => {
   }
 };
 
-
-
 // ==================== GET COMPLAINTS ====================
-// @desc    Get all complaints in warden's hostel
-// @route   GET /api/warden/complaints
-// @access  Private (Warden only)
-// ==================== GET COMPLAINTS ====================
+
 export const getComplaints = async (req, res) => {
   try {
     console.log("📋 Fetching complaints for warden...");
@@ -1060,7 +1055,6 @@ export const getComplaints = async (req, res) => {
   }
 };
 
-// ==================== UPDATE COMPLAINT STATUS ====================
 export const updateComplaintStatus = async (req, res) => {
   try {
     const { status, response } = req.body;
@@ -1102,14 +1096,8 @@ export const updateComplaintStatus = async (req, res) => {
   }
 };
 
-
-
-
 // ==================== PROFILE MANAGEMENT ====================
 
-// @desc    Get warden profile
-// @route   GET /api/warden/profile
-// @access  Private (Warden only)
 export const getWardenProfile = async (req, res) => {
   try {
     const warden = await User.findById(req.user.id)
@@ -1123,7 +1111,6 @@ export const getWardenProfile = async (req, res) => {
       });
     }
 
-    // Get additional warden details
     const wardenDetails = {
       name: warden.name,
       email: warden.email,
@@ -1157,9 +1144,6 @@ export const getWardenProfile = async (req, res) => {
   }
 };
 
-// @desc    Update warden profile
-// @route   PUT /api/warden/profile
-// @access  Private (Warden only)
 export const updateWardenProfile = async (req, res) => {
   try {
     const {
@@ -1188,7 +1172,6 @@ export const updateWardenProfile = async (req, res) => {
       });
     }
 
-    // Update fields
     if (name) warden.name = name;
     if (phone) warden.phone = phone;
     if (department) warden.department = department;
@@ -1236,9 +1219,6 @@ export const updateWardenProfile = async (req, res) => {
   }
 };
 
-// @desc    Change password
-// @route   POST /api/warden/change-password
-// @access  Private (Warden only)
 export const changeWardenPassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -1252,7 +1232,6 @@ export const changeWardenPassword = async (req, res) => {
       });
     }
 
-    // Check current password
     const isMatch = await bcrypt.compare(currentPassword, warden.password);
     if (!isMatch) {
       return res.status(400).json({
@@ -1261,7 +1240,6 @@ export const changeWardenPassword = async (req, res) => {
       });
     }
 
-    // Hash new password
     const salt = await bcrypt.genSalt(10);
     warden.password = await bcrypt.hash(newPassword, salt);
     await warden.save();
@@ -1281,9 +1259,6 @@ export const changeWardenPassword = async (req, res) => {
 
 // ==================== SETTINGS MANAGEMENT ====================
 
-// @desc    Get warden settings
-// @route   GET /api/warden/settings
-// @access  Private (Warden only)
 export const getWardenSettings = async (req, res) => {
   try {
     const warden = await User.findById(req.user.id);
@@ -1296,7 +1271,6 @@ export const getWardenSettings = async (req, res) => {
     }
 
     const settings = {
-      // Notification Settings
       emailNotifications: warden.emailNotifications !== false,
       pushNotifications: warden.pushNotifications !== false,
       smsNotifications: warden.smsNotifications || false,
@@ -1305,30 +1279,20 @@ export const getWardenSettings = async (req, res) => {
       attendanceAlerts: warden.attendanceAlerts !== false,
       feeAlerts: warden.feeAlerts || false,
       dailyDigest: warden.dailyDigest !== false,
-      
-      // Privacy Settings
       profileVisibility: warden.profileVisibility || 'staff_only',
       showEmail: warden.showEmail !== false,
       showPhone: warden.showPhone !== false,
       showDepartment: warden.showDepartment !== false,
-      
-      // Theme Settings
       theme: warden.theme || 'light',
       primaryColor: warden.primaryColor || '#2e7d32',
       fontSize: warden.fontSize || 'medium',
       compactView: warden.compactView || false,
-      
-      // Language Settings
       language: warden.language || 'en',
       dateFormat: warden.dateFormat || 'DD/MM/YYYY',
       timeFormat: warden.timeFormat || '12h',
-      
-      // Security Settings
       twoFactorAuth: warden.twoFactorAuth || false,
       sessionTimeout: warden.sessionTimeout || 30,
       loginAlerts: warden.loginAlerts !== false,
-      
-      // Data Settings
       autoBackup: warden.autoBackup !== false,
       backupFrequency: warden.backupFrequency || 'weekly',
       dataRetention: warden.dataRetention || 90
@@ -1347,9 +1311,6 @@ export const getWardenSettings = async (req, res) => {
   }
 };
 
-// @desc    Update warden settings
-// @route   PUT /api/warden/settings
-// @access  Private (Warden only)
 export const updateWardenSettings = async (req, res) => {
   try {
     const updates = req.body;
@@ -1362,7 +1323,6 @@ export const updateWardenSettings = async (req, res) => {
       });
     }
 
-    // Update each setting
     const allowedSettings = [
       'emailNotifications', 'pushNotifications', 'smsNotifications',
       'leaveRequests', 'complaints', 'attendanceAlerts', 'feeAlerts', 'dailyDigest',
@@ -1395,9 +1355,6 @@ export const updateWardenSettings = async (req, res) => {
   }
 };
 
-// @desc    Upload profile image
-// @route   POST /api/warden/upload-image
-// @access  Private (Warden only)
 export const uploadWardenImage = async (req, res) => {
   try {
     if (!req.file) {

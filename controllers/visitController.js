@@ -1,5 +1,6 @@
 import VisitRequest from '../models/VisitRequest.js';
 import Student from '../models/Student.js';
+import Parent from "../models/Parent.js";
 
 // Create visit request
 export const createVisitRequest = async (req, res) => {

@@ -1,3 +1,4 @@
+// models/Student.js - NO PRE-SAVE MIDDLEWARE
 import mongoose from "mongoose";
 
 const studentSchema = new mongoose.Schema(
@@ -12,7 +13,12 @@ const studentSchema = new mongoose.Schema(
   registrationNumber: {
     type: String,
     unique: true,
-    sparse: true
+    sparse: true,
+    default: () => {
+      const year = new Date().getFullYear().toString().slice(-2);
+      const random = Math.floor(Math.random() * 10000).toString().padStart(4, "0");
+      return `STU${year}${random}`;
+    }
   },
 
   enrollmentNumber: {
@@ -59,8 +65,7 @@ const studentSchema = new mongoose.Schema(
   hostel: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Hostel",
-    default: null,
-    required: false
+    default: null
   },
 
   phone: {
@@ -88,11 +93,166 @@ const studentSchema = new mongoose.Schema(
     default: ""
   },
 
+  city: {
+    type: String,
+    default: ""
+  },
+
+  state: {
+    type: String,
+    default: ""
+  },
+
+  pincode: {
+    type: String,
+    default: ""
+  },
+
+  emergencyContact: {
+    type: String,
+    default: ""
+  },
+
+  emergencyContactName: {
+    type: String,
+    default: ""
+  },
+
+  bloodGroup: {
+    type: String,
+    default: ""
+  },
+
+  dateOfBirth: {
+    type: Date,
+    default: null
+  },
+
+  gender: {
+    type: String,
+    default: ""
+  },
+
+  admissionYear: {
+    type: String,
+    default: ""
+  },
+
+  parentName: {
+    type: String,
+    default: ""
+  },
+
+  guardianName: {
+    type: String,
+    default: ""
+  },
+
+  guardianPhone: {
+    type: String,
+    default: ""
+  },
+
+  nationality: {
+    type: String,
+    default: "Indian"
+  },
+
+  religion: {
+    type: String,
+    default: ""
+  },
+
+  caste: {
+    type: String,
+    default: ""
+  },
+
+  aadharNo: {
+    type: String,
+    default: ""
+  },
+
+  panNo: {
+    type: String,
+    default: ""
+  },
+
+  profileImage: {
+    type: String,
+    default: ""
+  },
+
+  socialLinks: {
+    facebook: { type: String, default: "" },
+    twitter: { type: String, default: "" },
+    linkedin: { type: String, default: "" },
+    instagram: { type: String, default: "" },
+    github: { type: String, default: "" },
+    website: { type: String, default: "" }
+  },
+
+  achievements: [{
+    title: String,
+    description: String,
+    date: Date,
+    certificate: String
+  }],
+
+  skills: [String],
+
+  attendance: {
+    type: String,
+    default: "0%"
+  },
+
+  cgpa: {
+    type: String,
+    default: "0.0"
+  },
+
+  backlogs: {
+    type: Number,
+    default: 0
+  },
+
+  certifications: [String],
+
+  languages: [String],
+
+  hobbies: [String],
+
+  blockName: {
+    type: String,
+    default: ""
+  },
+
+  floorNo: {
+    type: String,
+    default: ""
+  },
+
+  roomNumber: {
+    type: String,
+    default: ""
+  },
+
+  hostelName: {
+    type: String,
+    default: ""
+  },
+
   warden: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    default: null  // Will assign automatically later
+    default: null
   },
+
+  // ✅ ADD THIS - Parent/Guardian references
+  parents: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  }],
 
   isActive: {
     type: Boolean,
@@ -103,32 +263,8 @@ const studentSchema = new mongoose.Schema(
 { timestamps: true }
 );
 
+// NO PRE-SAVE MIDDLEWARE - REMOVED COMPLETELY
 
-// ✅ Auto Generate Registration Number
-studentSchema.pre("save", async function () {
-
-  if (!this.registrationNumber) {
-    const year = new Date().getFullYear().toString().slice(-2);
-    const count = await mongoose.model("Student").countDocuments();
-    this.registrationNumber =
-      `STU${year}${(count + 1).toString().padStart(4, "0")}`;
-  }
-
-  // ✅ Auto-assign a default Warden if none set
-if (!this.warden && this.hostel) {
-  const warden = await mongoose.model("User").findOne({
-    role: "warden",
-    hostel: this.hostel
-  });
-
-  if (warden) {
-    this.warden = warden._id;
-  }
-}
-
-});
-
-const Student =
-  mongoose.models.Student || mongoose.model("Student", studentSchema);
+const Student = mongoose.models.Student || mongoose.model("Student", studentSchema);
 
 export default Student;

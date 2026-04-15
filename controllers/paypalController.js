@@ -1,36 +1,44 @@
 import axios from 'axios';
 import Fee from '../models/Fee.js';
-import Payment from '../models/Payment.js';
-import Notification from '../models/Notification.js';
 
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
-const PAYPAL_API_URL = process.env.PAYPAL_API_URL || 'https://api-m.sandbox.paypal.com';
+const PAYPAL_API_URL = 'https://api-m.sandbox.paypal.com';
 
+// Get PayPal access token
 const getAccessToken = async () => {
   try {
     const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString('base64');
-    const response = await axios.post(
-      `${PAYPAL_API_URL}/v1/oauth2/token`,
-      'grant_type=client_credentials',
-      {
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
+    const response = await axios({
+      method: 'post',
+      url: `${PAYPAL_API_URL}/v1/oauth2/token`,
+      data: 'grant_type=client_credentials',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
       }
-    );
+    });
+    console.log('✅ PayPal access token obtained');
     return response.data.access_token;
   } catch (error) {
-    console.error('Error getting PayPal token:', error);
-    throw error;
+    console.error('❌ PayPal Token Error:', error.response?.data || error.message);
+    throw new Error('Failed to get PayPal access token');
   }
 };
 
+// Create PayPal Order
 export const createOrder = async (req, res) => {
   try {
     const { amount, feeId, month, year, studentName } = req.body;
-    const usdAmount = (amount / 83).toFixed(2);
+    
+    console.log('📝 Creating PayPal order:', { amount, feeId, studentName });
+    
+    if (!amount || !feeId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Amount and feeId are required' 
+      });
+    }
     
     const accessToken = await getAccessToken();
     
@@ -38,102 +46,144 @@ export const createOrder = async (req, res) => {
       intent: 'CAPTURE',
       purchase_units: [{
         reference_id: feeId,
-        description: `Hostel Fee - ${month} ${year}`,
+        description: `Hostel Fee Payment - ${studentName || 'Student'}`,
         custom_id: feeId,
         amount: {
-          currency_code: 'USD',
-          value: usdAmount,
+          currency_code: 'INR',
+          value: amount.toString(),
           breakdown: {
             item_total: {
-              currency_code: 'USD',
-              value: usdAmount
+              currency_code: 'INR',
+              value: amount.toString()
             }
           }
         },
         items: [{
-          name: `Hostel Fee - ${month} ${year}`,
-          unit_amount: { currency_code: 'USD', value: usdAmount },
+          name: `Hostel Fee - ${month || 'Monthly'} ${year || new Date().getFullYear()}`,
+          unit_amount: {
+            currency_code: 'INR',
+            value: amount.toString()
+          },
           quantity: '1'
         }]
       }],
       application_context: {
-        brand_name: 'Hostel Management',
+        brand_name: 'Hostel Management System',
+        landing_page: 'BILLING',
         user_action: 'PAY_NOW',
-        return_url: `${process.env.FRONTEND_URL}/payment-success`,
-        cancel_url: `${process.env.FRONTEND_URL}/payment-cancel`
+        return_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/student/fees?payment=success`,
+        cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/student/fees?payment=cancelled`
       }
     };
     
-    const response = await axios.post(
-      `${PAYPAL_API_URL}/v2/checkout/orders`,
-      orderData,
-      { headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
-    );
+    const response = await axios({
+      method: 'post',
+      url: `${PAYPAL_API_URL}/v2/checkout/orders`,
+      data: orderData,
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
     
-    res.json({ success: true, orderId: response.data.id });
+    console.log('✅ PayPal order created:', response.data.id);
+    
+    res.json({
+      success: true,
+      orderId: response.data.id
+    });
+    
   } catch (error) {
-    console.error('Error creating order:', error);
-    res.status(500).json({ success: false, message: 'Failed to create order' });
+    console.error('❌ PayPal create order error:', error.response?.data || error.message);
+    res.status(500).json({ 
+      success: false, 
+      message: error.response?.data?.message || 'Failed to create PayPal order'
+    });
   }
 };
 
+// Capture PayPal Payment
 export const captureOrder = async (req, res) => {
   try {
-    const { orderId, feeId, amount, studentId, studentName, studentEmail, month, year } = req.body;
+    const { orderId, feeId, amount, studentId, studentName } = req.body;
+    
+    console.log('💰 Capturing PayPal order:', { orderId, feeId });
+    
+    if (!orderId || !feeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'OrderId and feeId are required'
+      });
+    }
     
     const accessToken = await getAccessToken();
     
-    const response = await axios.post(
-      `${PAYPAL_API_URL}/v2/checkout/orders/${orderId}/capture`,
-      {},
-      { headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
-    );
+    const response = await axios({
+      method: 'post',
+      url: `${PAYPAL_API_URL}/v2/checkout/orders/${orderId}/capture`,
+      data: {},
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
     
     if (response.data.status === 'COMPLETED') {
       const fee = await Fee.findById(feeId);
-      if (!fee) return res.status(404).json({ success: false, message: 'Fee not found' });
       
-      const receiptId = `RCP-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-      const paidAmount = amount || fee.dueAmount;
+      if (!fee) {
+        return res.status(404).json({
+          success: false,
+          message: 'Fee record not found'
+        });
+      }
       
+      const paidAmount = parseFloat(response.data.purchase_units[0].payments.captures[0].amount.value);
+      const transactionId = response.data.id;
+      const receiptId = `RCPT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      
+      console.log(`✅ Payment received: ₹${paidAmount}`);
+      
+      // Update fee
+      fee.paidAmount = (fee.paidAmount || 0) + paidAmount;
+      fee.dueAmount = (fee.totalAmount || fee.amount) - fee.paidAmount;
+      fee.status = fee.dueAmount <= 0 ? 'paid' : 'partial';
+      fee.paymentMethod = 'paypal';
+      fee.transactionId = transactionId;
+      fee.paymentDate = new Date();
+      
+      if (!fee.payments) fee.payments = [];
       fee.payments.push({
         amount: paidAmount,
-        transactionId: response.data.id,
+        transactionId: transactionId,
         paymentMethod: 'paypal',
-        receiptId,
+        receiptId: receiptId,
         paymentDate: new Date(),
-        status: 'success',
-        paidBy: req.user.role
+        status: 'completed'
       });
       
-      fee.paidAmount += paidAmount;
-      fee.dueAmount = fee.totalAmount - fee.paidAmount;
-      if (fee.paidAmount >= fee.totalAmount) fee.status = 'paid';
-      else if (fee.paidAmount > 0) fee.status = 'partial';
       await fee.save();
       
-      await Payment.create({
-        feeId, studentId, studentName, studentEmail,
-        month, year, amount: paidAmount,
-        transactionId: response.data.id, receiptId,
-        paymentMethod: 'paypal', paidBy: req.user.role,
-        paymentDetails: response.data
+      res.json({
+        success: true,
+        message: 'Payment captured successfully',
+        receiptId: receiptId,
+        transactionId: transactionId,
+        paidAmount: paidAmount
       });
       
-      await Notification.create({
-        recipient: studentId,
-        type: 'fee',
-        title: 'Payment Successful',
-        message: `Payment of ₹${paidAmount} received for ${month} ${year}`,
-        data: { feeId, transactionId: response.data.id }
-      });
-      
-      res.json({ success: true, receiptId, transactionId: response.data.id });
     } else {
-      throw new Error('Payment not completed');
+      res.json({
+        success: false,
+        message: 'Payment not completed'
+      });
     }
+    
   } catch (error) {
-    console.error('Error capturing payment:', error);
-    res.status(500).json({ success: false, message: 'Payment capture failed' });
+    console.error('❌ PayPal capture error:', error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      message: error.response?.data?.message || 'Failed to capture payment'
+    });
   }
 };

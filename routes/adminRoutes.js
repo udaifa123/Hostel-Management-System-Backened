@@ -1,3 +1,4 @@
+// routes/adminRoutes.js
 import express from "express";
 import {
   registerAdmin,
@@ -10,15 +11,19 @@ import {
   getHostels,
   getWardens,
   getStudents,
-  getStudentById,      // Add this
-  createStudent,       // Add this
-  updateStudent,       // Add this
-  deleteStudent,       // Add this
+  getStudentById,
+  createStudent,
+  updateStudent,
+  deleteStudent,
   getRooms,
   getLeaves,
   getComplaints,
   updateHostel,
-  deleteHostel
+  deleteHostel,
+  getWeeklyAttendance,
+  getWeeklyVisitors,
+  getAttendanceStats,
+  getVisitorStats
 } from "../controllers/adminController.js";
 
 // Import FEE functions from feeController.js (NOT from adminController)
@@ -61,15 +66,18 @@ router.put("/wardens/:id", protect, authorize('admin'), updateWarden);
 router.delete("/wardens/:id", protect, authorize('admin'), deleteWarden);
 
 // ==================== STUDENT MANAGEMENT ROUTES ====================
-// GET single student
 router.get("/students/:id", protect, authorize('admin'), getStudentById);
-// CREATE student
 router.post("/students", protect, authorize('admin'), createStudent);
-// UPDATE student
 router.put("/students/:id", protect, authorize('admin'), updateStudent);
-// DELETE student
 router.delete("/students/:id", protect, authorize('admin'), deleteStudent);
-// ================================================================
+
+// ==================== ATTENDANCE ROUTES ====================
+router.get("/attendance/weekly", protect, authorize('admin'), getWeeklyAttendance);
+router.get("/attendance/stats", protect, authorize('admin'), getAttendanceStats);
+
+// ==================== VISITOR ROUTES ====================
+router.get("/visitors/weekly", protect, authorize('admin'), getWeeklyVisitors);
+router.get("/visitors/stats", protect, authorize('admin'), getVisitorStats);
 
 // ==================== FEE MANAGEMENT ====================
 router.get("/fees", protect, authorize('admin'), getAllFeesAdmin);
@@ -78,6 +86,5 @@ router.post("/generate-all-fees", protect, authorize('admin'), generateAllFees);
 router.put("/fees/:feeId", protect, authorize('admin'), updateFee);
 router.delete("/fees/:feeId", protect, authorize('admin'), deleteFee);
 router.get("/analytics", protect, authorize('admin'), getFeeAnalytics);
-// ========================================================
 
 export default router;

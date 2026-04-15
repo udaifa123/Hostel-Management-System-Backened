@@ -1,27 +1,40 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const paymentSchema = new mongoose.Schema({
-  feeId: { type: mongoose.Schema.Types.ObjectId, ref: "Fee", required: true },
-  studentId: { type: mongoose.Schema.Types.ObjectId, ref: "Student", required: true },
+  studentId: mongoose.Schema.Types.ObjectId,
+  feeId: mongoose.Schema.Types.ObjectId,
   studentName: String,
-  studentEmail: String,
-  parentId: mongoose.Schema.Types.ObjectId,
-  month: String,
-  year: Number,
-  amount: { type: Number, required: true },
-  fineAmount: { type: Number, default: 0 },
-  transactionId: { type: String, unique: true },
-  receiptId: { type: String, unique: true },
-  paymentMethod: {
-    type: String,
-    enum: ['paypal', 'razorpay', 'cash', 'bank_transfer', 'card'],
-    default: 'paypal'
-  },
-  status: { type: String, enum: ['pending', 'success', 'failed', 'refunded'], default: 'success' },
-  paidBy: { type: String, enum: ['student', 'parent', 'warden', 'admin'] },
-  notes: String,
-  paymentDetails: { type: Object, default: {} },
-  paymentDate: { type: Date, default: Date.now }
-}, { timestamps: true });
+  registrationNumber: String,
+  amount: Number,
+  fineAmount: Number,
+  totalAmount: Number,
+  paymentMethod: String,
+  transactionId: String,
+  receiptNumber: String,
+  paymentDate: Date,
+  status: String,
+  paidBy: mongoose.Schema.Types.ObjectId,
+  paidByRole: String,
+  notes: String
+}, { 
+  timestamps: true,
+  autoIndex: false,  // Prevent automatic index creation
+  autoCreate: false   // Prevent automatic collection creation
+});
 
-export default mongoose.model("Payment", paymentSchema);
+// Ensure no indexes are created
+paymentSchema.index({});
+
+const Payment = mongoose.models.Payment || mongoose.model('Payment', paymentSchema);
+
+// Ensure the collection has no indexes when created
+(async () => {
+  try {
+    await Payment.collection.dropIndexes();
+    console.log('✅ Dropped all indexes on payments collection');
+  } catch(e) {
+    // Collection might not exist yet
+  }
+})();
+
+export default Payment;

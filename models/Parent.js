@@ -1,46 +1,45 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const parentSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: "User",
     required: true,
     unique: true
   },
-  students: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Student'
-  }],
   phone: {
     type: String,
-    required: true
+    default: ""
   },
-  alternatePhone: String,
-  address: {
-    street: String,
-    city: String,
-    state: String,
-    pincode: String,
-    country: String
-  },
-  occupation: String,
-  relationship: {
+  students: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Student"
+  }],
+  occupation: {
     type: String,
-    enum: ['father', 'mother', 'guardian', 'other'],
-    default: 'guardian'
+    default: ""
   },
-  notifications: {
-    email: { type: Boolean, default: true },
-    sms: { type: Boolean, default: true },
-    push: { type: Boolean, default: true }
+  address: {
+    type: String,
+    default: ""
+  },
+  relation: {
+    type: String,
+    default: ""
+  },
+  isPrimary: {
+    type: Boolean,
+    default: false
+  },
+  isEmergency: {
+    type: Boolean,
+    default: false
   },
   isActive: {
     type: Boolean,
     default: true
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
-const Parent = mongoose.models.Parent || mongoose.model('Parent', parentSchema);
+const Parent = mongoose.models.Parent || mongoose.model("Parent", parentSchema);
 export default Parent;

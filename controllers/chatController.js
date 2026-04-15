@@ -1,8 +1,8 @@
 import Message from '../models/Message.js';
 import Conversation from '../models/Conversation.js';
 import User from '../models/User.js';
+import Parent from '../models/Parent.js';
 import Student from '../models/Student.js';
-
 // @desc    Send a message
 // @route   POST /api/chat/send
 // @access  Private
@@ -515,5 +515,392 @@ export const getWarden = async (req, res) => {
       success: false,
       message: "Server error"
     });
+  }
+};
+
+
+// Add these functions to your existing chatController.js
+
+// @desc    Get wardens for parent
+// @route   GET /api/chat/parent/wardens
+// @access  Private (Parent only)
+export const getWardensForParent = async (req, res) => {
+  try {
+    console.log("👥 Fetching wardens for parent...");
+    console.log("User ID:", req.user.id);
+    
+    // Get parent with students
+    const parent = await Parent.findOne({ user: req.user.id });
+    
+    if (!parent || !parent.students || parent.students.length === 0) {
+      console.log("No students linked to parent");
+      return res.json({
+        success: true,
+        data: [],
+        message: "No students linked to your account"
+      });
+    }
+    
+    // Get students' hostel
+    const student = await Student.findById(parent.students[0]).populate('hostel');
+    
+    if (!student || !student.hostel) {
+      console.log("No hostel found for student");
+      return res.json({
+        success: true,
+        data: [],
+        message: "Hostel not assigned"
+      });
+    }
+    
+    console.log("Student hostel:", student.hostel._id);
+    
+    // Find warden for this hostel
+    const warden = await User.findOne({ 
+      role: 'warden', 
+      hostel: student.hostel._id,
+      isActive: true 
+    }).select('name email phone _id');
+    
+    if (!warden) {
+      console.log("No warden found for hostel");
+      return res.json({
+        success: true,
+        data: [],
+        message: "No warden assigned to this hostel"
+      });
+    }
+    
+    console.log("✅ Found warden:", warden.name);
+    
+    // Get last message for preview
+    const lastMessage = await Message.findOne({
+      $or: [
+        { sender: req.user.id, receiver: warden._id },
+        { sender: warden._id, receiver: req.user.id }
+      ]
+    }).sort({ createdAt: -1 });
+    
+    // Get unread count
+    const unreadCount = await Message.countDocuments({
+      sender: warden._id,
+      receiver: req.user.id,
+      isRead: false
+    });
+    
+    const wardenData = {
+      _id: warden._id,
+      name: warden.name,
+      email: warden.email,
+      phone: warden.phone,
+      role: 'warden',
+      lastMessage: lastMessage?.content || null,
+      lastMessageTime: lastMessage?.createdAt || null,
+      unreadCount: unreadCount
+    };
+    
+    res.json({
+      success: true,
+      data: [wardenData]
+    });
+    
+  } catch (error) {
+    console.error("Error fetching wardens:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Get chat messages for parent with warden
+// @route   GET /api/chat/parent/chat/:wardenId
+// @access  Private (Parent only)
+export const getParentChatMessages = async (req, res) => {
+  try {
+    const { wardenId } = req.params;
+    
+    console.log(`💬 Fetching chat messages with warden: ${wardenId}`);
+    
+    const messages = await Message.find({
+      $or: [
+        { sender: req.user.id, receiver: wardenId },
+        { sender: wardenId, receiver: req.user.id }
+      ]
+    })
+    .populate('sender', 'name email role')
+    .populate('receiver', 'name email role')
+    .sort({ createdAt: 1 });
+    
+    // Mark messages as read
+    await Message.updateMany(
+      { sender: wardenId, receiver: req.user.id, isRead: false },
+      { isRead: true, readAt: new Date() }
+    );
+    
+    console.log(`✅ Found ${messages.length} messages`);
+    
+    res.json({
+      success: true,
+      data: messages
+    });
+    
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Send message from parent to warden
+// @route   POST /api/chat/parent/send
+// @access  Private (Parent only)
+export const sendParentMessage = async (req, res) => {
+  try {
+    const { receiverId, content } = req.body;
+    
+    console.log(`📤 Sending message from parent to warden: ${receiverId}`);
+    console.log("Content:", content);
+    
+    if (!receiverId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Receiver ID is required" 
+      });
+    }
+    
+    if (!content || !content.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Message content is required" 
+      });
+    }
+    
+    const message = await Message.create({
+      sender: req.user.id,
+      receiver: receiverId,
+      content: content.trim(),
+      attachments: [],
+      isDelivered: true,
+      isRead: false
+    });
+    
+    const populatedMessage = await Message.findById(message._id)
+      .populate('sender', 'name email role')
+      .populate('receiver', 'name email role');
+    
+    // Emit socket event for real-time
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${receiverId}`).emit('new_message', populatedMessage);
+      console.log(`📡 Real-time message sent to warden ${receiverId}`);
+    }
+    
+    console.log("✅ Message sent successfully");
+    
+    res.status(201).json({
+      success: true,
+      data: populatedMessage
+    });
+    
+  } catch (error) {
+    console.error("Error sending message:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+
+// ==================== WARDEN CHAT FUNCTIONS ====================
+
+// @desc    Get conversations for warden (parents who messaged)
+// @route   GET /api/chat/warden/conversations
+// @access  Private (Warden only)
+export const getWardenConversations = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    console.log(`📋 Fetching conversations for warden ${userId}`);
+
+    // Get warden's hostel
+    const warden = await User.findById(userId).populate('hostel');
+    
+    if (!warden.hostel) {
+      return res.status(404).json({
+        success: false,
+        message: 'No hostel assigned to this warden'
+      });
+    }
+
+    // Get all students in warden's hostel
+    const students = await Student.find({ hostel: warden.hostel._id });
+    const studentIds = students.map(s => s._id);
+
+    // Get all parents linked to these students
+    const parents = await Parent.find({ students: { $in: studentIds } })
+      .populate('user', 'name email phone');
+
+    console.log(`✅ Found ${parents.length} parents in hostel`);
+
+    const conversations = [];
+
+    for (const parent of parents) {
+      if (!parent.user) continue;
+
+      // Get last message between warden and this parent
+      const lastMessage = await Message.findOne({
+        $or: [
+          { sender: userId, receiver: parent.user._id },
+          { sender: parent.user._id, receiver: userId }
+        ]
+      })
+      .sort({ createdAt: -1 })
+      .populate('sender', 'name')
+      .populate('receiver', 'name');
+
+      // Get unread count for warden
+      const unreadCount = await Message.countDocuments({
+        sender: parent.user._id,
+        receiver: userId,
+        isRead: false
+      });
+
+      conversations.push({
+        id: parent.user._id.toString(),
+        participant: {
+          _id: parent.user._id,
+          name: parent.user.name || 'Unknown',
+          email: parent.user.email,
+          role: 'parent',
+          phone: parent.user.phone
+        },
+        lastMessage: lastMessage || null,
+        lastMessageAt: lastMessage?.createdAt || null,
+        unreadCount
+      });
+    }
+
+    // Sort by last message time (most recent first)
+    conversations.sort((a, b) => {
+      if (!a.lastMessageAt) return 1;
+      if (!b.lastMessageAt) return -1;
+      return new Date(b.lastMessageAt) - new Date(a.lastMessageAt);
+    });
+
+    console.log(`✅ Returning ${conversations.length} conversations for warden`);
+
+    res.json({
+      success: true,
+      data: conversations
+    });
+
+  } catch (error) {
+    console.error('❌ Error in getWardenConversations:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// @desc    Get chat messages for warden with a specific parent
+// @route   GET /api/chat/warden/chat/:parentId
+// @access  Private (Warden only)
+export const getWardenChatMessages = async (req, res) => {
+  try {
+    const { parentId } = req.params;
+    const userId = req.user.id;
+
+    console.log(`💬 Fetching messages between warden ${userId} and parent ${parentId}`);
+
+    const messages = await Message.find({
+      $or: [
+        { sender: userId, receiver: parentId },
+        { sender: parentId, receiver: userId }
+      ],
+      isDeleted: false
+    })
+    .sort({ createdAt: 1 })
+    .populate('sender', 'name email role')
+    .populate('receiver', 'name email role');
+
+    // Mark messages as read
+    await Message.updateMany(
+      {
+        sender: parentId,
+        receiver: userId,
+        isRead: false
+      },
+      {
+        isRead: true,
+        readAt: new Date()
+      }
+    );
+
+    console.log(`✅ Found ${messages.length} messages`);
+
+    res.json({
+      success: true,
+      data: messages
+    });
+
+  } catch (error) {
+    console.error('Error fetching warden chat messages:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// @desc    Send message from warden to parent
+// @route   POST /api/chat/warden/send
+// @access  Private (Warden only)
+export const sendWardenMessage = async (req, res) => {
+  try {
+    const { receiverId, content } = req.body;
+    
+    console.log(`📤 Sending message from warden ${req.user.id} to parent ${receiverId}`);
+    console.log("Content:", content);
+    
+    if (!receiverId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Receiver ID is required" 
+      });
+    }
+    
+    if (!content || !content.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Message content is required" 
+      });
+    }
+    
+    const message = await Message.create({
+      sender: req.user.id,
+      receiver: receiverId,
+      content: content.trim(),
+      attachments: [],
+      isDelivered: true,
+      isRead: false
+    });
+    
+    const populatedMessage = await Message.findById(message._id)
+      .populate('sender', 'name email role')
+      .populate('receiver', 'name email role');
+    
+    // Emit socket event for real-time
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${receiverId}`).emit('new_message', populatedMessage);
+      console.log(`📡 Real-time message sent to parent ${receiverId}`);
+    }
+    
+    console.log("✅ Message sent successfully");
+    
+    res.status(201).json({
+      success: true,
+      data: populatedMessage
+    });
+    
+  } catch (error) {
+    console.error("Error sending warden message:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };

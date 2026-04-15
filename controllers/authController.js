@@ -188,29 +188,116 @@ export const wardenLogin = async (req, res) => {
   }
 };
 
-// ================= PARENT LOGIN =================
+// ================= PARENT LOGIN (COMPLETELY FIXED) =================
 export const parentLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ success: false, message: "Email and password required" });
+    
+    console.log("========================================");
+    console.log("🔐 PARENT LOGIN ATTEMPT");
+    console.log("Email:", email);
+    console.log("Password received:", password ? "Yes" : "No");
+    console.log("========================================");
+    
+    if (!email || !password) {
+      console.log("❌ Missing email or password");
+      return res.status(400).json({ 
+        success: false, 
+        message: "Email and password required" 
+      });
+    }
 
+    // Find parent user
+    console.log("📧 Searching for parent user...");
     const user = await User.findOne({ email, role: "parent" }).select("+password");
-    if (!user) return res.status(401).json({ success: false, message: "Invalid email or password" });
+    
+    if (!user) {
+      console.log("❌ Parent user NOT found for email:", email);
+      return res.status(401).json({ 
+        success: false, 
+        message: "Invalid email or password" 
+      });
+    }
 
+    console.log("✅ Parent user FOUND:", user.email);
+    console.log("Stored password hash:", user.password.substring(0, 20) + "...");
+
+    // Verify password
+    console.log("🔐 Verifying password...");
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ success: false, message: "Invalid email or password" });
+    
+    console.log("Password match result:", isMatch);
+    
+    if (!isMatch) {
+      console.log("❌ Password MISMATCH for parent:", email);
+      return res.status(401).json({ 
+        success: false, 
+        message: "Invalid email or password" 
+      });
+    }
 
-    const parentData = await Parent.findOne({ user: user._id })
-      .populate({ path:"students", populate:[ { path:"user", select:"name email phone" }, { path:"room" }, { path:"hostel" } ] });
+    console.log("✅ Password VERIFIED for parent:", email);
 
-    if (!parentData) return res.status(404).json({ success: false, message: "Parent profile not found" });
+    // Find parent profile
+    console.log("📝 Finding parent profile...");
+    let parentData = await Parent.findOne({ user: user._id })
+      .populate({
+        path: "students",
+        populate: [
+          { path: "user", select: "name email phone" },
+          { path: "room" },
+          { path: "hostel" }
+        ]
+      });
 
-    const token = jwt.sign({ id: user._id, role: "parent" }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    // Create parent profile if it doesn't exist
+    if (!parentData) {
+      console.log("📝 Creating missing parent profile for:", email);
+      parentData = await Parent.create({
+        user: user._id,
+        phone: user.phone || "",
+        students: [],
+        relation: "",
+        occupation: "",
+        address: "",
+        isPrimary: false,
+        isEmergency: false
+      });
+      console.log("✅ Parent profile CREATED");
+    } else {
+      console.log("✅ Parent profile FOUND");
+    }
 
-    res.json({ success: true, token, user:{ id: user._id, name: user.name, email: user.email, role: "parent", phone: user.phone, parent: parentData } });
+    // Generate JWT token
+    console.log("🎫 Generating JWT token...");
+    const token = jwt.sign(
+      { id: user._id, role: "parent", email: user.email }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: "7d" }
+    );
+
+    console.log("✅ PARENT LOGIN SUCCESSFUL!");
+    console.log("========================================");
+
+    res.json({ 
+      success: true, 
+      token, 
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: "parent",
+        phone: user.phone,
+        parent: parentData
+      }
+    });
 
   } catch (error) {
-    console.error("Parent login error:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("❌ Parent login error:", error);
+    console.error("Error stack:", error.stack);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server error: " + error.message 
+    });
   }
 };

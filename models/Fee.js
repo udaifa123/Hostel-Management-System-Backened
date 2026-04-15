@@ -1,77 +1,52 @@
-import mongoose from "mongoose";
-
-const paymentSchema = new mongoose.Schema({
-  amount: { type: Number, required: true },
-  date: { type: Date, default: Date.now },
-  method: { type: String, enum: ["online", "cash", "bank"], default: "online" },
-  transactionId: { type: String, sparse: true },
-  receiptId: { type: String, sparse: true },
-  paidBy: { type: String, enum: ["student", "parent", "warden", "admin"], default: "student" },
-  notes: String
-}, { _id: false });
+import mongoose from 'mongoose';
 
 const feeSchema = new mongoose.Schema({
-  studentId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Student",
-    required: true
-  },
+  studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
   studentName: { type: String, required: true },
-  studentEmail: { type: String, required: true },
-  month: { type: String, required: true },
+  studentEmail: String,
+  registrationNumber: String,
+  feeType: { type: String, default: 'monthly' },
+  month: { type: Number },
   year: { type: Number, required: true },
+  title: { type: String, default: '' },
   
-  rent: { type: Number, default: 4000 },
-  food: { type: Number, default: 2000 },
-  electricity: { type: Number, default: 500 },
-  mess: { type: Number, default: 3000 },
+  // Fee Components
+  tuitionFee: { type: Number, default: 0 },
+  hostelFee: { type: Number, default: 0 },
+  messFee: { type: Number, default: 0 },
+  maintenanceFee: { type: Number, default: 0 },
   
-  baseAmount: { type: Number, default: 0 },
-  fineAmount: { type: Number, default: 0 },
+  amount: { type: Number, default: 0 },
   totalAmount: { type: Number, default: 0 },
   paidAmount: { type: Number, default: 0 },
   dueAmount: { type: Number, default: 0 },
   
+  // Fines
+  lateFine: { type: Number, default: 0 },
+  totalFine: { type: Number, default: 0 },
+  finePerDay: { type: Number, default: 10 },
+  
+  // Attendance
+  attendancePercentage: { type: Number, default: 100 },
+  
+  // Scholarship
+  scholarshipPercentage: { type: Number, default: 0 },
+  
+  // Dates
   dueDate: { type: Date, required: true },
   paidDate: Date,
   
-  fineType: { type: String, enum: ['per_day', 'fixed', 'percentage'], default: 'per_day' },
-  finePerDay: { type: Number, default: 10 },
-  fixedFine: { type: Number, default: 100 },
-  finePercentage: { type: Number, default: 5 },
+  // Status
+  status: { type: String, default: 'pending' },
   
-  status: { type: String, enum: ['paid', 'partial', 'pending', 'overdue'], default: 'pending' },
+  // Payments
+  payments: { type: Array, default: [] },
   
-  payments: [paymentSchema],
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 
-feeSchema.methods.calculateFine = function() {
-  const today = new Date();
-  const due = new Date(this.dueDate);
-  if (today <= due || this.status === 'paid') return this.fineAmount;
-  const daysLate = Math.ceil((today - due) / (1000 * 60 * 60 * 24));
-  
-  switch(this.fineType) {
-    case 'per_day': return daysLate * this.finePerDay;
-    case 'fixed': return this.fixedFine;
-    case 'percentage': return (this.baseAmount * this.finePercentage / 100);
-    default: return daysLate * this.finePerDay;
-  }
-};
+// NO PRE-SAVE MIDDLEWARE - REMOVED COMPLETELY
 
-feeSchema.pre('save', function(next) {
-  this.baseAmount = this.rent + this.food + this.electricity + this.mess;
-  this.fineAmount = this.calculateFine();
-  this.totalAmount = this.baseAmount + this.fineAmount;
-  this.dueAmount = this.totalAmount - this.paidAmount;
-  
-  const today = new Date();
-  if (this.paidAmount >= this.totalAmount) this.status = 'paid';
-  else if (this.paidAmount > 0) this.status = 'partial';
-  else if (today > this.dueDate) this.status = 'overdue';
-  else this.status = 'pending';
-  next();
-});
-
-export default mongoose.model("Fee", feeSchema);
+const Fee = mongoose.models.Fee || mongoose.model('Fee', feeSchema);
+export default Fee;

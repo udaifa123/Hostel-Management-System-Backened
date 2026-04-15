@@ -248,7 +248,10 @@ import uploadRoutes from './routes/uploadRoutes.js';
 import messRoutes from './routes/messRoutes.js';
 import qrRoutes from './routes/qrRoutes.js';
 import maintenanceRoutes from './routes/maintenanceRoutes.js';
-import paypalRoutes from './routes/paypalRoutes.js'; 
+import paypalRoutes from './routes/paypalRoutes.js';
+// import feeCron from './cron/feeCron.js'; 
+import autoFeeRoutes from './routes/autoFeeRoutes.js';
+import autoFeeCron from './cron/autoFeeCron.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -332,6 +335,11 @@ app.use('/api/paypal', paypalRoutes);
 // In your server.js, add this line
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+app.use('/api/auto-fee', autoFeeRoutes);
+
+// feeCron.init();
+
+autoFeeCron.init();
 // 404 Handler
 app.use((req, res) => {
   res.status(404).json({ 

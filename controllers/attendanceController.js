@@ -2,6 +2,84 @@ import Attendance from "../models/Attendance.js";
 import Student from "../models/Student.js";
 import User from "../models/User.js";
 
+// ==================== STUDENT ATTENDANCE ROUTES ====================
+
+// @desc    Get student's own attendance
+// @route   GET /api/student/attendance
+// @access  Private (Student only)
+export const getStudentAttendance = async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    
+    console.log(`📋 Fetching attendance for student ${req.user.id} - Month: ${month}, Year: ${year}`);
+    
+    // Find student
+    const student = await Student.findOne({ user: req.user.id });
+    if (!student) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Student not found',
+        data: []
+      });
+    }
+    
+    // Build date range
+    let startDate, endDate;
+    const now = new Date();
+    
+    if (month && year) {
+      // Get specific month
+      startDate = new Date(year, month - 1, 1);
+      endDate = new Date(year, month, 0);
+    } else {
+      // Get current month
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    }
+    
+    // Set time boundaries
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+    
+    // Find attendance records
+    const attendanceRecords = await Attendance.find({
+      student: student._id,
+      date: { $gte: startDate, $lte: endDate }
+    }).populate('markedBy', 'name email')
+      .sort({ date: 1 });
+    
+    console.log(`✅ Found ${attendanceRecords.length} attendance records for student ${student.name || student._id}`);
+    
+    // Format response
+    const formattedRecords = attendanceRecords.map(record => ({
+      _id: record._id,
+      date: record.date,
+      status: record.status,
+      timeIn: record.timeIn,
+      timeOut: record.timeOut,
+      remarks: record.remarks || '',
+      markedBy: record.markedBy ? {
+        name: record.markedBy.name,
+        email: record.markedBy.email
+      } : null
+    }));
+    
+    res.json({
+      success: true,
+      data: formattedRecords,
+      count: formattedRecords.length
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching student attendance:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      data: []
+    });
+  }
+};
+
 // ==================== ADMIN DASHBOARD ROUTES ====================
 
 // @desc    Get attendance statistics for dashboard
@@ -203,7 +281,7 @@ export const getMonthlyAttendance = async (req, res) => {
   }
 };
 
-// ==================== EXISTING WARDEN ROUTES ====================
+// ==================== WARDEN ATTENDANCE ROUTES ====================
 
 // @desc    Get attendance for a specific date
 // @route   GET /api/attendance/:date
@@ -364,10 +442,10 @@ export const markAttendance = async (req, res) => {
   }
 };
 
-// @desc    Get attendance for a specific student
+// @desc    Get attendance for a specific student (Warden view)
 // @route   GET /api/attendance/student/:studentId
 // @access  Private (Warden only)
-export const getStudentAttendance = async (req, res) => {
+export const getWardenStudentAttendance = async (req, res) => {
   try {
     const { studentId } = req.params;
     console.log(`📊 Fetching attendance history for student: ${studentId}`);

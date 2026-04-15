@@ -60,31 +60,280 @@ export const getDashboard = async (req, res) => {
 
 
 // ================= PROFILE =================
+// controllers/studentController.js - FIXED getStudentProfile
+
 export const getStudentProfile = async (req, res) => {
   try {
-
-    const student = await Student
-      .findOne({ user: req.user._id })
-      .populate("user");
+    console.log("📋 Fetching student profile...");
+    
+    const student = await Student.findOne({ user: req.user._id })
+      .populate("user")
+      .populate("hostel")
+      .populate("room");
 
     if (!student) {
-      return res.status(404).json({ message: "Student not found" });
+      return res.status(404).json({ 
+        success: false, 
+        message: "Student profile not found" 
+      });
     }
 
+    // Format date of birth if exists
+    let formattedDateOfBirth = '';
+    if (student.dateOfBirth) {
+      try {
+        formattedDateOfBirth = new Date(student.dateOfBirth).toISOString().split('T')[0];
+      } catch (e) {
+        console.error("Date parsing error:", e);
+      }
+    }
+
+    // Return comprehensive profile data
     res.json({
-      name: student.user.name,
-      email: student.user.email,
-      phone: student.user.phone,
-      course: student.course,
-      semester: student.semester,
-      address: student.address
+      success: true,
+      data: {
+        name: student.user?.name || req.user.name,
+        email: student.user?.email || req.user.email,
+        phone: student.user?.phone || student.phone,
+        studentId: student.registrationNumber,
+        enrollmentNo: student.enrollmentNumber,
+        rollNumber: student.rollNumber,
+        course: student.course,
+        branch: student.branch,
+        year: student.year,
+        semester: student.semester,
+        roomNo: student.room?.roomNumber || student.roomNumber,
+        roomId: student.room?._id,
+        hostelName: student.hostel?.name || student.hostelName,
+        hostelId: student.hostel?._id,
+        blockName: student.blockName,
+        floorNo: student.floorNo,
+        address: student.address || '',
+        city: student.city || '',
+        state: student.state || '',
+        pincode: student.pincode || '',
+        emergencyContact: student.emergencyContact || '',
+        emergencyName: student.emergencyContactName || '',
+        bloodGroup: student.bloodGroup || '',
+        dateOfBirth: formattedDateOfBirth,
+        gender: student.gender || '',
+        admissionYear: student.admissionYear || '',
+        parentName: student.parentName || '',
+        parentPhone: student.parentPhone || '',
+        parentEmail: student.parentEmail || '',
+        guardianName: student.guardianName || '',
+        guardianPhone: student.guadrianPhone || '',
+        nationality: student.nationality || "Indian",
+        religion: student.religion || '',
+        caste: student.caste || '',
+        aadharNo: student.aadharNo || '',
+        panNo: student.panNo || '',
+        profileImage: student.profileImage || student.user?.profileImage || '',
+        socialLinks: student.socialLinks || {
+          facebook: '', twitter: '', linkedin: '', instagram: '', github: '', website: ''
+        },
+        achievements: student.achievements || [],
+        skills: student.skills || [],
+        attendance: student.attendance || "0%",
+        cgpa: student.cgpa || "0.0",
+        backlogs: student.backlogs || 0,
+        certifications: student.certifications || [],
+        languages: student.languages || [],
+        hobbies: student.hobbies || [],
+        isActive: student.isActive
+      }
     });
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("❌ Error fetching profile:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message || "Failed to fetch profile"
+    });
   }
 };
 
+
+// controllers/studentController.js - FIXED updateStudentProfile
+
+// controllers/studentController.js - Add/Replace this function
+
+export const updateStudentProfile = async (req, res) => {
+  try {
+    console.log("📝 Updating student profile...");
+    console.log("Request body:", req.body);
+    
+    // Find the student
+    let student = await Student.findOne({ user: req.user._id }).populate("user");
+    
+    if (!student) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Student not found" 
+      });
+    }
+    
+    // Track changes
+    let userUpdated = false;
+    let studentUpdated = false;
+    
+    // Update simple fields
+    const simpleFields = [
+      'course', 'branch', 'semester', 'address', 'city', 'state', 'pincode',
+      'bloodGroup', 'gender', 'admissionYear', 'parentName', 'parentPhone', 
+      'parentEmail', 'guardianName', 'guardianPhone', 'nationality', 'religion',
+      'caste', 'aadharNo', 'panNo', 'cgpa', 'backlogs', 'blockName', 'floorNo',
+      'roomNumber', 'hostelName', 'emergencyContact', 'emergencyContactName'
+    ];
+    
+    for (const field of simpleFields) {
+      if (req.body[field] !== undefined) {
+        student[field] = req.body[field];
+        studentUpdated = true;
+      }
+    }
+    
+    // Handle date of birth
+    if (req.body.dateOfBirth) {
+      student.dateOfBirth = new Date(req.body.dateOfBirth);
+      studentUpdated = true;
+    }
+    
+    // Handle name and phone (User model)
+    if (req.body.name !== undefined && student.user) {
+      student.user.name = req.body.name;
+      userUpdated = true;
+    }
+    
+    if (req.body.phone !== undefined && student.user) {
+      student.user.phone = req.body.phone;
+      userUpdated = true;
+    }
+    
+    // Handle enrollment number
+    if (req.body.enrollmentNo !== undefined) {
+      student.enrollmentNumber = req.body.enrollmentNo;
+      studentUpdated = true;
+    }
+    
+    // Handle student ID
+    if (req.body.studentId !== undefined) {
+      student.registrationNumber = req.body.studentId;
+      studentUpdated = true;
+    }
+    
+    // Handle arrays
+    if (req.body.skills && Array.isArray(req.body.skills)) {
+      student.skills = req.body.skills;
+      studentUpdated = true;
+    }
+    
+    if (req.body.languages && Array.isArray(req.body.languages)) {
+      student.languages = req.body.languages;
+      studentUpdated = true;
+    }
+    
+    if (req.body.hobbies && Array.isArray(req.body.hobbies)) {
+      student.hobbies = req.body.hobbies;
+      studentUpdated = true;
+    }
+    
+    if (req.body.achievements && Array.isArray(req.body.achievements)) {
+      student.achievements = req.body.achievements;
+      studentUpdated = true;
+    }
+    
+    // Handle social links
+    if (req.body.socialLinks && typeof req.body.socialLinks === 'object') {
+      student.socialLinks = { ...student.socialLinks, ...req.body.socialLinks };
+      studentUpdated = true;
+    }
+    
+    // Save changes
+    if (userUpdated && student.user) {
+      await student.user.save();
+      console.log("✅ User data updated");
+    }
+    
+    if (studentUpdated) {
+      await student.save();
+      console.log("✅ Student data updated");
+    }
+    
+    // Fetch updated data
+    const updatedStudent = await Student.findOne({ user: req.user._id })
+      .populate("user")
+      .populate("hostel")
+      .populate("room");
+    
+    console.log("✅ Profile updated successfully");
+    
+    // Format response
+    let formattedDateOfBirth = '';
+    if (updatedStudent.dateOfBirth) {
+      try {
+        formattedDateOfBirth = new Date(updatedStudent.dateOfBirth).toISOString().split('T')[0];
+      } catch (e) {}
+    }
+    
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
+      data: {
+        name: updatedStudent.user?.name || req.user.name,
+        email: updatedStudent.user?.email || req.user.email,
+        phone: updatedStudent.user?.phone || updatedStudent.phone,
+        studentId: updatedStudent.registrationNumber,
+        enrollmentNo: updatedStudent.enrollmentNumber,
+        course: updatedStudent.course,
+        branch: updatedStudent.branch,
+        semester: updatedStudent.semester,
+        roomNo: updatedStudent.room?.roomNumber || updatedStudent.roomNumber,
+        hostelName: updatedStudent.hostel?.name || updatedStudent.hostelName,
+        blockName: updatedStudent.blockName,
+        floorNo: updatedStudent.floorNo,
+        address: updatedStudent.address,
+        city: updatedStudent.city,
+        state: updatedStudent.state,
+        pincode: updatedStudent.pincode,
+        emergencyContact: updatedStudent.emergencyContact,
+        emergencyName: updatedStudent.emergencyContactName,
+        bloodGroup: updatedStudent.bloodGroup,
+        dateOfBirth: formattedDateOfBirth,
+        gender: updatedStudent.gender,
+        admissionYear: updatedStudent.admissionYear,
+        parentName: updatedStudent.parentName,
+        parentPhone: updatedStudent.parentPhone,
+        parentEmail: updatedStudent.parentEmail,
+        guardianName: updatedStudent.guardianName,
+        guardianPhone: updatedStudent.guardianPhone,
+        nationality: updatedStudent.nationality,
+        religion: updatedStudent.religion,
+        caste: updatedStudent.caste,
+        aadharNo: updatedStudent.aadharNo,
+        panNo: updatedStudent.panNo,
+        profileImage: updatedStudent.profileImage,
+        socialLinks: updatedStudent.socialLinks || {},
+        achievements: updatedStudent.achievements || [],
+        skills: updatedStudent.skills || [],
+        attendance: updatedStudent.attendance,
+        cgpa: updatedStudent.cgpa,
+        backlogs: updatedStudent.backlogs,
+        certifications: updatedStudent.certifications || [],
+        languages: updatedStudent.languages || [],
+        hobbies: updatedStudent.hobbies || []
+      }
+    });
+    
+  } catch (error) {
+    console.error("❌ Error updating profile:", error);
+    console.error("Error stack:", error.stack);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message || "Failed to update profile"
+    });
+  }
+};
 
 // ================= LEAVES =================
 export const getLeaves = async (req, res) => {
@@ -230,32 +479,79 @@ export const createComplaint = async (req, res) => {
 // ================= NOTIFICATIONS =================
 export const getNotifications = async (req, res) => {
   try {
-
+    console.log("📋 Fetching notifications for user:", req.user._id);
+    
     const notifications = await Notification
       .find({ recipient: req.user._id })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .limit(100);
 
+    console.log(`✅ Found ${notifications.length} notifications`);
+    
     res.json(notifications);
-
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error fetching notifications:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };
 
-
 export const markNotificationRead = async (req, res) => {
   try {
-
+    console.log("📝 Marking notification as read:", req.params.id);
+    
     const notification = await Notification.findByIdAndUpdate(
       req.params.id,
-      { isRead: true },
+      { isRead: true, readAt: new Date() },
       { new: true }
     );
 
-    res.json(notification);
+    if (!notification) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Notification not found" 
+      });
+    }
 
+    console.log("✅ Notification marked as read");
+    
+    res.json({ 
+      success: true, 
+      data: notification 
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error marking notification as read:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+};
+
+export const markAllNotificationsRead = async (req, res) => {
+  try {
+    console.log("📝 Marking all notifications as read for user:", req.user._id);
+    
+    const result = await Notification.updateMany(
+      { recipient: req.user._id, isRead: false },
+      { isRead: true, readAt: new Date() }
+    );
+    
+    console.log(`✅ Marked ${result.modifiedCount} notifications as read`);
+    
+    res.json({
+      success: true,
+      message: `${result.modifiedCount} notifications marked as read`,
+      count: result.modifiedCount
+    });
+  } catch (error) {
+    console.error("Error marking all notifications as read:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };
 
@@ -623,3 +919,6 @@ export const getWardenInfo = async (req, res) => {
 
   }
 };
+
+
+
