@@ -252,6 +252,7 @@ import paypalRoutes from './routes/paypalRoutes.js';
 // import feeCron from './cron/feeCron.js'; 
 import autoFeeRoutes from './routes/autoFeeRoutes.js';
 import autoFeeCron from './cron/autoFeeCron.js';
+import assetRoutes from './routes/assetRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -331,6 +332,7 @@ app.use('/api/mess', messRoutes);
 app.use('/api/qr', qrRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/paypal', paypalRoutes); 
+app.use('/api/assets', assetRoutes);
 
 // In your server.js, add this line
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
