@@ -19,7 +19,7 @@ import {
   getActiveVisits,
   getStudentMessages,
   sendMessageToStudent,
-    getWardenProfile,
+  getWardenProfile,
   updateWardenProfile,
   changeWardenPassword,
   getWardenSettings,
@@ -30,7 +30,9 @@ import {
 // Import FEE functions from feeController.js (NOT from wardenController)
 import {
   getAllFeesWarden,
-  manualPayment
+  manualPayment,
+  addManualFine,
+  sendFeeReminder
 } from '../controllers/feeController.js';
 
 // Import room controllers
@@ -54,6 +56,10 @@ import {
   getNoticeById
 } from '../controllers/noticeController.js';
 import upload from '../middleware/upload.js';
+import User from '../models/User.js';
+import path from 'path';
+import fs from 'fs';
+
 const router = express.Router();
 
 // All routes require authentication and warden role
@@ -115,8 +121,9 @@ router.post('/messages/send', sendMessageToStudent);
 // ==================== FEE MANAGEMENT ====================
 router.get("/fees", getAllFeesWarden);
 router.post("/fees/manual-payment", manualPayment);
+router.post("/fees/:feeId/fine", addManualFine);
+router.post("/fees/:feeId/reminder", sendFeeReminder);
 // ========================================================
-
 
 // ==================== PROFILE & SETTINGS ====================
 router.get('/profile', getWardenProfile);
@@ -125,8 +132,6 @@ router.post('/change-password', changeWardenPassword);
 router.get('/settings', getWardenSettings);
 router.put('/settings', updateWardenSettings);
 router.post('/upload-image', uploadWardenImage);
-
-
 
 // Update the upload route
 router.post('/upload-image', protect, authorize('warden'), upload.single('profileImage'), async (req, res) => {
