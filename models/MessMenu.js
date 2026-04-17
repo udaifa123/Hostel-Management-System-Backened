@@ -30,7 +30,7 @@ const messMenuSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Ensure one menu per hostel per day
+
 messMenuSchema.index({ hostelId: 1, date: 1 }, { unique: true });
 
 const MessMenu = mongoose.models.MessMenu || mongoose.model('MessMenu', messMenuSchema);

@@ -60,10 +60,10 @@ export const register = async (req, res) => {
       if (parentEmail) {
         let parentUser = await User.findOne({ email: parentEmail, role: "parent" });
 
-        // If parent user doesn't exist, throw error
+      
         if (!parentUser) return console.log("❌ Parent user not found for linking");
 
-        // Create parent profile if it doesn't exist
+        
         let parentProfile = await Parent.findOne({ user: parentUser._id });
         if (!parentProfile) {
           parentProfile = await Parent.create({ user: parentUser._id, phone: parentUser.phone, students: [] });
@@ -188,7 +188,7 @@ export const wardenLogin = async (req, res) => {
   }
 };
 
-// ================= PARENT LOGIN (COMPLETELY FIXED) =================
+// ================= PARENT LOGIN =================
 export const parentLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -207,7 +207,7 @@ export const parentLogin = async (req, res) => {
       });
     }
 
-    // Find parent user
+   
     console.log("📧 Searching for parent user...");
     const user = await User.findOne({ email, role: "parent" }).select("+password");
     
@@ -238,7 +238,7 @@ export const parentLogin = async (req, res) => {
 
     console.log("✅ Password VERIFIED for parent:", email);
 
-    // Find parent profile
+    
     console.log("📝 Finding parent profile...");
     let parentData = await Parent.findOne({ user: user._id })
       .populate({
@@ -250,7 +250,7 @@ export const parentLogin = async (req, res) => {
         ]
       });
 
-    // Create parent profile if it doesn't exist
+
     if (!parentData) {
       console.log("📝 Creating missing parent profile for:", email);
       parentData = await Parent.create({
@@ -268,7 +268,7 @@ export const parentLogin = async (req, res) => {
       console.log("✅ Parent profile FOUND");
     }
 
-    // Generate JWT token
+    
     console.log("🎫 Generating JWT token...");
     const token = jwt.sign(
       { id: user._id, role: "parent", email: user.email }, 

@@ -50,7 +50,7 @@ const leaveSchema = new mongoose.Schema({
     default: "pending"
   },
 
-  // ✅ ADDED MISSING FIELDS
+
   approvedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User"
@@ -67,7 +67,7 @@ const leaveSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 
-// AUTO GENERATE DATA
+
 leaveSchema.pre("save", function () {
 
   if (!this.leaveNumber) {

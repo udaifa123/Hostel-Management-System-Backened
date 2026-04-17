@@ -2,9 +2,7 @@ import User from "../models/User.js";
 import Student from "../models/Student.js";
 import jwt from "jsonwebtoken";
 
-// =======================
-// REGISTER STUDENT OR PARENT
-// =======================
+
 export const registerUser = async (req, res) => {
   try {
     const { name, email, password, role, phone, hostelId } = req.body;
@@ -33,7 +31,7 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    // ✅ Pass plain password here, pre-save hook will hash it
+    
     const newUser = new User({
       name,
       email: normalizedEmail,
@@ -45,11 +43,11 @@ export const registerUser = async (req, res) => {
 
     await newUser.save();
 
-    // If student, create student profile
+   
     if (role === "student") {
       try {
         const student = new Student({ user: newUser._id });
-        await student.save(); // registration/enrollment numbers
+        await student.save(); 
       } catch (err) {
         await User.findByIdAndDelete(newUser._id);
         return res.status(500).json({
@@ -77,9 +75,7 @@ export const registerUser = async (req, res) => {
   }
 };
 
-// =======================
-// LOGIN STUDENT OR PARENT
-// =======================
+
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -90,7 +86,7 @@ export const loginUser = async (req, res) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // ✅ include password explicitly
+    
     const user = await User.findOne({ email: normalizedEmail }).select('+password');
 
     if (!user) return res.status(400).json({ success: false, message: "User not found" });

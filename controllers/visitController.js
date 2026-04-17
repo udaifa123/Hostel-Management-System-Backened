@@ -2,14 +2,14 @@ import VisitRequest from '../models/VisitRequest.js';
 import Student from '../models/Student.js';
 import Parent from "../models/Parent.js";
 
-// Create visit request
+
 export const createVisitRequest = async (req, res) => {
   try {
     console.log("🔥 Requesting visit...");
 
     let student;
 
-    // ✅ Get student from logged user
+    
     if (req.user.role === "student") {
       student = await Student.findOne({ user: req.user._id }).populate("user");
     } else {
@@ -26,7 +26,7 @@ export const createVisitRequest = async (req, res) => {
     const visit = await VisitRequest.create({
       ...req.body,
 
-      // ✅ IMPORTANT FIX
+      
       studentId: student._id,
       studentName: student.user.name,
 
@@ -47,7 +47,7 @@ export const createVisitRequest = async (req, res) => {
   }
 };
 
-// Get student's visits
+
 export const getStudentVisits = async (req, res) => {
   try {
     const student = await Student.findOne({ user: req.user.id });
@@ -58,7 +58,7 @@ export const getStudentVisits = async (req, res) => {
   }
 };
 
-// Get visit details
+
 export const getVisitDetails = async (req, res) => {
   try {
     const visit = await VisitRequest.findById(req.params.id)
@@ -73,7 +73,7 @@ export const getVisitDetails = async (req, res) => {
   }
 };
 
-// Get all visits (admin/warden)
+
 export const getAllVisits = async (req, res) => {
   try {
     const visits = await VisitRequest.find().populate({
@@ -89,7 +89,7 @@ export const getAllVisits = async (req, res) => {
   }
 };
 
-// Approve visit
+
 export const approveVisit = async (req, res) => {
   try {
     const visit = await VisitRequest.findByIdAndUpdate(
@@ -108,7 +108,7 @@ export const approveVisit = async (req, res) => {
   }
 };
 
-// Reject visit
+
 export const rejectVisit = async (req, res) => {
   try {
     const visit = await VisitRequest.findByIdAndUpdate(
@@ -127,14 +127,14 @@ export const rejectVisit = async (req, res) => {
   }
 };
 
-// Check-in visitor
+
 export const checkInVisitor = async (req, res) => {
   try {
     const visit = await VisitRequest.findByIdAndUpdate(
       req.params.id,
       {
         checkInTime: new Date(),
-status: 'approved' // or keep approved flow
+status: 'approved' 
       },
       { new: true }
     );
@@ -144,7 +144,7 @@ status: 'approved' // or keep approved flow
   }
 };
 
-// Check-out visitor
+
 export const checkOutVisitor = async (req, res) => {
   try {
     const visit = await VisitRequest.findByIdAndUpdate(
@@ -161,7 +161,7 @@ status: 'completed'
   }
 };
 
-// Get visit statistics
+
 export const getVisitStatistics = async (req, res) => {
   try {
     const stats = await VisitRequest.aggregate([

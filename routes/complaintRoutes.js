@@ -13,17 +13,16 @@ import {
 
 const router = express.Router();
 
-// All routes require authentication
+
 router.use(protect);
 
-// Student routes
+
 router.post('/', authorize('student'), createComplaint);
 router.get('/my-complaints', authorize('student'), getStudentComplaints);
 
-// Common routes
+
 router.get('/:id', getComplaintDetails);
 
-// Admin/Warden routes
 router.get('/', authorize('admin', 'warden'), getAllComplaints);
 router.put('/:id/status', authorize('admin', 'warden'), updateComplaintStatus);
 router.put('/:id/assign', authorize('admin'), assignComplaint);

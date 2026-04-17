@@ -1,4 +1,3 @@
-// config/paypal.js
 import axios from 'axios';
 
 const PAYPAL_API = process.env.PAYPAL_MODE === 'live' 
@@ -8,9 +7,9 @@ const PAYPAL_API = process.env.PAYPAL_MODE === 'live'
 let accessToken = null;
 let tokenExpiry = null;
 
-// Get PayPal Access Token
 export const getPayPalAccessToken = async () => {
-  // Check if token is still valid
+ 
+  
   if (accessToken && tokenExpiry && Date.now() < tokenExpiry) {
     return accessToken;
   }
@@ -40,7 +39,6 @@ export const getPayPalAccessToken = async () => {
   }
 };
 
-// Create PayPal Order
 export const createPayPalOrder = async (amount, description, customData) => {
   const token = await getPayPalAccessToken();
   
@@ -86,7 +84,7 @@ export const createPayPalOrder = async (amount, description, customData) => {
   }
 };
 
-// Capture PayPal Order
+
 export const capturePayPalOrder = async (orderId) => {
   const token = await getPayPalAccessToken();
   

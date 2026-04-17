@@ -6,7 +6,7 @@ import Student from '../models/Student.js';
 class FeeCronJobs {
   
   init() {
-    // Run daily at midnight to update all pending fees
+   
     cron.schedule('0 0 * * *', async () => {
       console.log('🔄 Running daily fee update job...');
       
@@ -23,7 +23,7 @@ class FeeCronJobs {
           const dueDate = new Date(fee.dueDate);
           
           if (today > dueDate && fee.paidAmount < fee.totalAmount) {
-            // Calculate late fine
+            
             const daysLate = Math.ceil((today - dueDate) / (1000 * 60 * 60 * 24));
             let newLateFine = 0;
             
@@ -42,7 +42,7 @@ class FeeCronJobs {
               await fee.save();
               updatedCount++;
               
-              // Send notification for overdue fee
+             
               if (fee.studentId && fee.studentId.user) {
                 await Notification.create({
                   recipient: fee.studentId.user,
@@ -63,7 +63,7 @@ class FeeCronJobs {
       }
     });
     
-    // Run every Monday at 9 AM to send reminders
+   
     cron.schedule('0 9 * * 1', async () => {
       console.log('📧 Sending fee reminder emails...');
       

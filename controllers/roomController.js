@@ -2,9 +2,7 @@ import Room from "../models/Room.js";
 import User from "../models/User.js";
 import Student from "../models/Student.js";
 
-// @desc    Get all rooms in warden's hostel
-// @route   GET /api/warden/rooms
-// @access  Private (Warden only)
+
 export const getRooms = async (req, res) => {
   try {
     console.log("🔍 Fetching rooms for warden:", req.user.id);
@@ -45,9 +43,7 @@ export const getRooms = async (req, res) => {
   }
 };
 
-// @desc    Get single room by ID
-// @route   GET /api/warden/rooms/:id
-// @access  Private (Warden only)
+
 export const getRoomById = async (req, res) => {
   try {
     const room = await Room.findById(req.params.id)
@@ -80,9 +76,7 @@ export const getRoomById = async (req, res) => {
   }
 };
 
-// @desc    Create a new room
-// @route   POST /api/warden/rooms
-// @access  Private (Warden only)
+
 export const createRoom = async (req, res) => {
   try {
     console.log("📝 Creating new room:", req.body);
@@ -96,7 +90,7 @@ export const createRoom = async (req, res) => {
       status
     } = req.body;
 
-    // Validation
+    
     if (!roomNumber || !block || !floor || !capacity || !type) {
       return res.status(400).json({
         success: false,
@@ -104,7 +98,7 @@ export const createRoom = async (req, res) => {
       });
     }
 
-    // Get warden's hostel
+    
     const warden = await User.findById(req.user.id).populate('hostel');
     
     if (!warden.hostel) {
@@ -114,7 +108,7 @@ export const createRoom = async (req, res) => {
       });
     }
 
-    // Check if room already exists in this hostel
+   
     const existingRoom = await Room.findOne({
       roomNumber,
       block,
@@ -128,7 +122,7 @@ export const createRoom = async (req, res) => {
       });
     }
 
-    // Create room
+   
     const room = await Room.create({
       roomNumber,
       block,
@@ -151,7 +145,7 @@ export const createRoom = async (req, res) => {
   } catch (error) {
     console.error("❌ Error creating room:", error);
 
-    // Handle duplicate key error
+   
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -159,7 +153,7 @@ export const createRoom = async (req, res) => {
       });
     }
 
-    // Handle validation errors
+  
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({
@@ -175,9 +169,7 @@ export const createRoom = async (req, res) => {
   }
 };
 
-// @desc    Update a room
-// @route   PUT /api/warden/rooms/:id
-// @access  Private (Warden only)
+
 export const updateRoom = async (req, res) => {
   try {
     const {
@@ -198,7 +190,7 @@ export const updateRoom = async (req, res) => {
       });
     }
 
-    // Check if room has occupants and trying to reduce capacity below current occupants
+   
     if (capacity && capacity < room.occupants?.length) {
       return res.status(400).json({
         success: false,
@@ -206,7 +198,7 @@ export const updateRoom = async (req, res) => {
       });
     }
 
-    // Update room
+   
     const updatedRoom = await Room.findByIdAndUpdate(
       req.params.id,
       {
@@ -249,9 +241,7 @@ export const updateRoom = async (req, res) => {
   }
 };
 
-// @desc    Delete a room
-// @route   DELETE /api/warden/rooms/:id
-// @access  Private (Warden only)
+
 export const deleteRoom = async (req, res) => {
   try {
     const room = await Room.findById(req.params.id);
@@ -263,7 +253,7 @@ export const deleteRoom = async (req, res) => {
       });
     }
 
-    // Check if room has occupants
+ 
     if (room.occupants && room.occupants.length > 0) {
       return res.status(400).json({
         success: false,
@@ -287,9 +277,7 @@ export const deleteRoom = async (req, res) => {
   }
 };
 
-// @desc    Update room occupants
-// @route   PUT /api/warden/rooms/:id/occupants
-// @access  Private (Warden only)
+
 export const updateRoomOccupants = async (req, res) => {
   try {
     const { occupantIds } = req.body;
@@ -303,7 +291,7 @@ export const updateRoomOccupants = async (req, res) => {
       });
     }
 
-    // Validate occupant count
+   
     if (occupantIds.length > room.capacity) {
       return res.status(400).json({
         success: false,
@@ -311,7 +299,7 @@ export const updateRoomOccupants = async (req, res) => {
       });
     }
 
-    // Update room occupants
+    
     room.occupants = occupantIds;
     await room.save();
 
@@ -339,9 +327,7 @@ export const updateRoomOccupants = async (req, res) => {
   }
 };
 
-// @desc    Remove occupant from room
-// @route   DELETE /api/warden/rooms/:roomId/occupants/:studentId
-// @access  Private (Warden only)
+
 export const removeOccupant = async (req, res) => {
   try {
     const { roomId, studentId } = req.params;
@@ -355,7 +341,6 @@ export const removeOccupant = async (req, res) => {
       });
     }
 
-    // Remove student from room occupants
     room.occupants = room.occupants.filter(id => id.toString() !== studentId);
     await room.save();
 

@@ -9,7 +9,7 @@ import Fee from "../models/Fee.js";
 import mongoose from 'mongoose';
 
 
-// ================= DASHBOARD =================
+
 export const getDashboard = async (req, res) => {
   try {
 
@@ -59,8 +59,7 @@ export const getDashboard = async (req, res) => {
 };
 
 
-// ================= PROFILE =================
-// controllers/studentController.js - FIXED getStudentProfile
+
 
 export const getStudentProfile = async (req, res) => {
   try {
@@ -78,7 +77,7 @@ export const getStudentProfile = async (req, res) => {
       });
     }
 
-    // Format date of birth if exists
+   
     let formattedDateOfBirth = '';
     if (student.dateOfBirth) {
       try {
@@ -88,7 +87,7 @@ export const getStudentProfile = async (req, res) => {
       }
     }
 
-    // Return comprehensive profile data
+    
     res.json({
       success: true,
       data: {
@@ -154,16 +153,13 @@ export const getStudentProfile = async (req, res) => {
 };
 
 
-// controllers/studentController.js - FIXED updateStudentProfile
-
-// controllers/studentController.js - Add/Replace this function
 
 export const updateStudentProfile = async (req, res) => {
   try {
     console.log("📝 Updating student profile...");
     console.log("Request body:", req.body);
     
-    // Find the student
+   
     let student = await Student.findOne({ user: req.user._id }).populate("user");
     
     if (!student) {
@@ -173,11 +169,11 @@ export const updateStudentProfile = async (req, res) => {
       });
     }
     
-    // Track changes
+   
     let userUpdated = false;
     let studentUpdated = false;
     
-    // Update simple fields
+  
     const simpleFields = [
       'course', 'branch', 'semester', 'address', 'city', 'state', 'pincode',
       'bloodGroup', 'gender', 'admissionYear', 'parentName', 'parentPhone', 
@@ -193,13 +189,13 @@ export const updateStudentProfile = async (req, res) => {
       }
     }
     
-    // Handle date of birth
+   
     if (req.body.dateOfBirth) {
       student.dateOfBirth = new Date(req.body.dateOfBirth);
       studentUpdated = true;
     }
     
-    // Handle name and phone (User model)
+   
     if (req.body.name !== undefined && student.user) {
       student.user.name = req.body.name;
       userUpdated = true;
@@ -210,19 +206,19 @@ export const updateStudentProfile = async (req, res) => {
       userUpdated = true;
     }
     
-    // Handle enrollment number
+    
     if (req.body.enrollmentNo !== undefined) {
       student.enrollmentNumber = req.body.enrollmentNo;
       studentUpdated = true;
     }
     
-    // Handle student ID
+    
     if (req.body.studentId !== undefined) {
       student.registrationNumber = req.body.studentId;
       studentUpdated = true;
     }
     
-    // Handle arrays
+    
     if (req.body.skills && Array.isArray(req.body.skills)) {
       student.skills = req.body.skills;
       studentUpdated = true;
@@ -243,13 +239,13 @@ export const updateStudentProfile = async (req, res) => {
       studentUpdated = true;
     }
     
-    // Handle social links
+    
     if (req.body.socialLinks && typeof req.body.socialLinks === 'object') {
       student.socialLinks = { ...student.socialLinks, ...req.body.socialLinks };
       studentUpdated = true;
     }
     
-    // Save changes
+   
     if (userUpdated && student.user) {
       await student.user.save();
       console.log("✅ User data updated");
@@ -260,7 +256,7 @@ export const updateStudentProfile = async (req, res) => {
       console.log("✅ Student data updated");
     }
     
-    // Fetch updated data
+    
     const updatedStudent = await Student.findOne({ user: req.user._id })
       .populate("user")
       .populate("hostel")
@@ -268,7 +264,7 @@ export const updateStudentProfile = async (req, res) => {
     
     console.log("✅ Profile updated successfully");
     
-    // Format response
+   
     let formattedDateOfBirth = '';
     if (updatedStudent.dateOfBirth) {
       try {
@@ -335,7 +331,7 @@ export const updateStudentProfile = async (req, res) => {
   }
 };
 
-// ================= LEAVES =================
+
 export const getLeaves = async (req, res) => {
   try {
 
@@ -379,7 +375,7 @@ export const applyLeave = async (req, res) => {
 };
 
 
-// ================= COMPLAINT =================
+
 export const getComplaints = async (req, res) => {
   try {
     console.log("📋 Fetching complaints for student...");
@@ -441,7 +437,7 @@ export const createComplaint = async (req, res) => {
 
     console.log("✅ Complaint saved:", complaint._id);
 
-    // Notify warden
+    
     try {
       const warden = await User.findOne({ 
         role: 'warden',
@@ -476,7 +472,6 @@ export const createComplaint = async (req, res) => {
   }
 };
 
-// ================= NOTIFICATIONS =================
 export const getNotifications = async (req, res) => {
   try {
     console.log("📋 Fetching notifications for user:", req.user._id);
@@ -556,8 +551,7 @@ export const markAllNotificationsRead = async (req, res) => {
 };
 
 
-// ================= VISITS =================
-// controllers/studentController.js - Update getVisits
+
 
 export const getVisits = async (req, res) => {
   try {
@@ -572,7 +566,6 @@ export const getVisits = async (req, res) => {
       });
     }
 
-    // Fetch visits where studentId matches
     const visits = await VisitRequest.find({ studentId: student._id })
       .sort({ createdAt: -1 });
 
@@ -593,7 +586,6 @@ export const getVisits = async (req, res) => {
 
 
 
-// controllers/studentController.js - Replace the entire requestVisit function
 
 export const requestVisit = async (req, res) => {
   try {
@@ -603,7 +595,7 @@ export const requestVisit = async (req, res) => {
     console.log("User ID:", req.user?._id);
     console.log("User role:", req.user?.role);
     
-    // Find student
+   
     const student = await Student.findOne({ user: req.user._id }).populate('user');
 
     if (!student) {
@@ -619,7 +611,7 @@ export const requestVisit = async (req, res) => {
 
     const { visitorName, relation, visitorPhone, visitDate, visitTime, purpose, numberOfVisitors } = req.body;
 
-    // Validate required fields
+   
     const errors = [];
     if (!visitorName) errors.push("Visitor name is required");
     if (!relation) errors.push("Relation is required");
@@ -634,7 +626,6 @@ export const requestVisit = async (req, res) => {
       });
     }
 
-    // Create visit request
     const visitData = {
       studentId: student._id,
       studentName: student.user?.name || student.name,
@@ -661,7 +652,7 @@ export const requestVisit = async (req, res) => {
     console.log("Visit ID:", visit._id);
     console.log("=".repeat(50));
 
-    // Notify warden (don't let this fail the request)
+
     try {
       const warden = await User.findOne({ role: 'warden', hostel: student.hostel });
       if (warden) {
@@ -693,7 +684,7 @@ export const requestVisit = async (req, res) => {
     console.error("Full error:", error);
     console.error("=".repeat(50));
     
-    // Handle specific MongoDB errors
+
     if (error.code === 11000) {
       return res.status(400).json({ 
         success: false, 
@@ -723,7 +714,7 @@ export const cancelVisit = async (req, res) => {
       });
     }
     
-    // Check if the student owns this visit
+   
     const student = await Student.findOne({ user: req.user._id });
     
     if (visit.studentId?.toString() !== student._id.toString() && 
@@ -734,7 +725,7 @@ export const cancelVisit = async (req, res) => {
       });
     }
     
-    // Only allow cancellation if status is pending
+   
     if (visit.status !== 'pending') {
       return res.status(400).json({
         success: false,
@@ -761,8 +752,6 @@ export const cancelVisit = async (req, res) => {
 
 
 
-
-// ================= CHAT =================
 export const getWardenChat = async (req, res) => {
   try {
 
@@ -810,9 +799,7 @@ export const sendMessage = async (req, res) => {
 };
 
 
-// ================= FEES =================
 
-// GET FEES SUMMARY
 export const getFees = async (req, res) => {
   try {
 
@@ -848,7 +835,7 @@ export const getFees = async (req, res) => {
 };
 
 
-// GET TRANSACTIONS
+
 export const getTransactions = async (req, res) => {
   try {
 
@@ -876,7 +863,7 @@ export const getTransactions = async (req, res) => {
 };
 
 
-// ================= GET WARDEN INFO =================
+
 export const getWardenInfo = async (req, res) => {
   try {
 

@@ -67,7 +67,7 @@ const complaintSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Auto-generate complaint number if not provided
+
 complaintSchema.pre('save', async function () {
   if (!this.complaintNumber) {
     const count = await mongoose.model('Complaint').countDocuments();

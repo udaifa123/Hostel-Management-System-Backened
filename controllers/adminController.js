@@ -547,7 +547,7 @@ export const getWardens = async (req, res) => {
 };
 
 // ==================== STUDENT MANAGEMENT ====================
-// GET ALL STUDENTS - FIXED WITH BETTER NAME FETCHING
+
 export const getStudents = async (req, res) => {
   try {
     console.log('📋 Fetching all students...');
@@ -600,7 +600,7 @@ export const getStudents = async (req, res) => {
 };
 
 
-// Add these to your adminController.js if they don't exist
+
 
 // ==================== STUDENT MANAGEMENT CONTROLLERS ====================
 
@@ -680,7 +680,7 @@ export const createStudent = async (req, res) => {
       });
     }
 
-    // Check if user already exists
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -708,7 +708,7 @@ export const createStudent = async (req, res) => {
       isActive: status === 'active'
     };
 
-    // Add optional fields if provided
+   
     if (hostelId) studentData.hostel = hostelId;
     if (roomId) studentData.room = roomId;
     if (phone) studentData.phone = phone;
@@ -716,7 +716,7 @@ export const createStudent = async (req, res) => {
 
     const student = await Student.create(studentData);
 
-    // Update room occupancy if room is assigned
+
     if (roomId) {
       await Room.findByIdAndUpdate(roomId, {
         $addToSet: { students: student._id }
@@ -775,13 +775,13 @@ export const updateStudent = async (req, res) => {
       });
     }
 
-    // Update User document if needed
+    
     if (name || email || phone) {
       const user = await User.findById(student.user);
       if (user) {
         if (name) user.name = name;
         if (email) {
-          // Check if email is taken by another user
+       
           const emailExists = await User.findOne({ 
             email, 
             _id: { $ne: user._id } 
@@ -799,9 +799,9 @@ export const updateStudent = async (req, res) => {
       }
     }
 
-    // Handle room assignment changes
+   
     if (roomId && roomId !== student.room?.toString()) {
-      // Remove from old room
+     
       if (student.room) {
         await Room.findByIdAndUpdate(student.room, {
           $pull: { students: student._id }
@@ -822,7 +822,7 @@ export const updateStudent = async (req, res) => {
     
     await student.save();
 
-    // Get updated student with populated fields
+  
     const updatedStudent = await Student.findById(id)
       .populate('user', 'name email phone')
       .populate('hostel', 'name code')
@@ -928,9 +928,7 @@ export const getRooms = async (req, res) => {
   }
 };
 
-// GET ALL LEAVES
-// GET ALL LEAVES - FIXED
-// GET ALL LEAVES - COMPLETELY FIXED
+
 export const getLeaves = async (req, res) => {
   try {
     console.log("📋 Fetching all leaves for admin...");
@@ -967,10 +965,7 @@ export const getLeaves = async (req, res) => {
   }
 };
 
-// GET ALL COMPLAINTS
-// GET ALL COMPLAINTS - FIXED
-// GET ALL COMPLAINTS - FIXED
-// GET ALL COMPLAINTS - COMPLETELY FIXED
+
 export const getComplaints = async (req, res) => {
   try {
     console.log("📋 Fetching all complaints for admin...");
@@ -987,7 +982,7 @@ export const getComplaints = async (req, res) => {
     
     console.log(`✅ Found ${complaints.length} complaints`);
     
-    // Transform data for frontend
+    
     const transformedComplaints = complaints.map(complaint => ({
       _id: complaint._id,
       complaintNumber: complaint.complaintNumber,
@@ -1061,8 +1056,7 @@ export const deleteHostel = async (req, res) => {
   }
 };
 
-// ==================== FEE MANAGEMENT - FIXED ====================
-// GET ALL FEES (ADMIN) - FIXED WITH PROPER STUDENT NAME FETCHING
+// ==================== FEE MANAGEMENT ====================
 export const getAllFeesAdmin = async (req, res) => {
   try {
     const { status, month, year } = req.query;
@@ -1073,7 +1067,7 @@ export const getAllFeesAdmin = async (req, res) => {
     
     let fees = await Fee.find(query).sort({ year: -1, month: -1 });
     
-    // Update fines in real-time
+    
     for (let fee of fees) {
       if (typeof fee.calculateFine === 'function') {
         const newFine = fee.calculateFine();
@@ -1086,23 +1080,23 @@ export const getAllFeesAdmin = async (req, res) => {
       }
     }
     
-    // Get student names from Student model with populated user
+    
     const feesWithNames = await Promise.all(fees.map(async (fee) => {
       let studentName = 'Unknown';
       let studentRegNumber = '';
       let studentEmail = '';
       
       try {
-        // First find the student
+        
         const student = await Student.findById(fee.studentId).populate('user', 'name email');
         
         if (student) {
-          // Get name from populated user
+          
           if (student.user) {
             studentName = student.user.name || 'Unknown';
             studentEmail = student.user.email || '';
           } else if (student.name) {
-            // Fallback to student's own name
+           
             studentName = student.name;
           }
           studentRegNumber = student.registrationNumber || '';
@@ -1150,18 +1144,18 @@ export const getAllFeesAdmin = async (req, res) => {
   }
 };
 
-// GENERATE FEE
+
 export const generateFee = async (req, res) => {
   try {
     const { studentId, month, year, rent, food, electricity, mess, dueDate, discount } = req.body;
     
-    // Find student with populated user
+    
     const student = await Student.findById(studentId).populate('user', 'name email');
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
     
-    // Check if fee already exists
+    
     const existingFee = await Fee.findOne({ studentId, month, year });
     if (existingFee) {
       return res.status(400).json({ success: false, message: 'Fee already exists for this month' });
@@ -1202,14 +1196,14 @@ export const generateFee = async (req, res) => {
   }
 };
 
-// GENERATE ALL FEES - FIXED
+
 export const generateAllFees = async (req, res) => {
   try {
     const { month, year, dueDate, finePerDay = 10 } = req.body;
     
     console.log('📋 Generating fees for:', { month, year, dueDate });
     
-    // Get all students with populated user data
+    
     const students = await Student.find({}).populate('user', 'name email');
     
     if (students.length === 0) {
@@ -1225,7 +1219,7 @@ export const generateAllFees = async (req, res) => {
     const baseAmount = 9500;
     
     for (const student of students) {
-      // Check if fee already exists
+    
       const existing = await Fee.findOne({ 
         studentId: student._id, 
         month: month, 
@@ -1237,11 +1231,11 @@ export const generateAllFees = async (req, res) => {
         continue;
       }
       
-      // Get student name from populated user
+      
       const studentName = student.user?.name || student.name || 'Unknown';
       const studentEmail = student.user?.email || '';
       
-      // Calculate fine if due date passed
+      
       let fineAmount = 0;
       const today = new Date();
       if (today > due) {
@@ -1314,13 +1308,13 @@ export const updateFee = async (req, res) => {
   }
 };
 
-// GET FEE ANALYTICS
+
 export const getFeeAnalytics = async (req, res) => {
   try {
     const { year } = req.query;
     const targetYear = year || new Date().getFullYear();
     
-    // Monthly collection
+    
     const monthlyCollection = [];
     for (let i = 0; i < 12; i++) {
       const monthStart = new Date(targetYear, i, 1);
@@ -1342,12 +1336,10 @@ export const getFeeAnalytics = async (req, res) => {
       });
     }
     
-    // Status distribution
     const statusDistribution = await Fee.aggregate([
       { $group: { _id: '$status', count: { $sum: 1 }, amount: { $sum: '$totalAmount' } } }
     ]);
     
-    // Collection by method
     const methodDistribution = await Payment.aggregate([
       { $match: { status: 'success' } },
       { $group: { _id: '$paymentMethod', count: { $sum: 1 }, amount: { $sum: '$amount' } } }
@@ -1372,14 +1364,12 @@ export const getFeeAnalytics = async (req, res) => {
 
 // ==================== ATTENDANCE MANAGEMENT ====================
 
-// @desc    Get weekly attendance data for charts
-// @route   GET /api/admin/attendance/weekly
 export const getWeeklyAttendance = async (req, res) => {
   try {
-    // Get all students count
+   
     const totalStudents = await User.countDocuments({ role: 'student', isActive: true });
     
-    // Generate last 7 days data
+    
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const weeklyData = [];
     
@@ -1391,7 +1381,7 @@ export const getWeeklyAttendance = async (req, res) => {
       const nextDay = new Date(date);
       nextDay.setDate(nextDay.getDate() + 1);
       
-      // Get attendance for this date
+   
       const Attendance = await import('../models/Attendance.js').then(m => m.default);
       const presentCount = await Attendance.countDocuments({
         date: { $gte: date, $lt: nextDay },
@@ -1417,7 +1407,7 @@ export const getWeeklyAttendance = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching weekly attendance:', error);
-    // Return mock data on error
+    
     res.json({
       success: true,
       data: [
@@ -1433,13 +1423,12 @@ export const getWeeklyAttendance = async (req, res) => {
   }
 };
 
-// @desc    Get attendance statistics
-// @route   GET /api/admin/attendance/stats
+
 export const getAttendanceStats = async (req, res) => {
   try {
     const totalStudents = await User.countDocuments({ role: 'student', isActive: true });
     
-    // Today's attendance
+  
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const nextDay = new Date(today);
@@ -1451,7 +1440,7 @@ export const getAttendanceStats = async (req, res) => {
       status: 'present'
     });
     
-    // Weekly average (last 7 days)
+
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     const weeklyAttendance = await Attendance.find({
@@ -1462,7 +1451,7 @@ export const getAttendanceStats = async (req, res) => {
     const weeklyTotal = weeklyAttendance.length;
     const weeklyAverage = weeklyTotal > 0 ? (weeklyPresent / weeklyTotal) * 100 : 0;
     
-    // Monthly average (last 30 days)
+    
     const monthAgo = new Date();
     monthAgo.setDate(monthAgo.getDate() - 30);
     const monthlyAttendance = await Attendance.find({
@@ -1503,9 +1492,6 @@ export const getAttendanceStats = async (req, res) => {
 };
 
 // ==================== VISITOR MANAGEMENT ====================
-
-// @desc    Get weekly visitor data for charts
-// @route   GET /api/admin/visitors/weekly
 export const getWeeklyVisitors = async (req, res) => {
   try {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -1559,13 +1545,12 @@ export const getWeeklyVisitors = async (req, res) => {
   }
 };
 
-// @desc    Get visitor statistics
-// @route   GET /api/admin/visitors/stats
+
 export const getVisitorStats = async (req, res) => {
   try {
     const VisitRequest = await import('../models/VisitRequest.js').then(m => m.default);
     
-    // Today's visitors
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const nextDay = new Date(today);
@@ -1579,15 +1564,13 @@ export const getVisitorStats = async (req, res) => {
     const todayStudents = todayVisits.filter(v => v.requestedBy === 'student').length;
     const todayParents = todayVisits.filter(v => v.requestedBy === 'parent').length;
     
-    // Weekly total (last 7 days)
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     const weeklyVisits = await VisitRequest.countDocuments({
       visitDate: { $gte: weekAgo },
       status: 'approved'
     });
-    
-    // Monthly total (last 30 days)
+   
     const monthAgo = new Date();
     monthAgo.setDate(monthAgo.getDate() - 30);
     const monthlyVisits = await VisitRequest.countDocuments({

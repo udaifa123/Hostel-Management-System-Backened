@@ -8,26 +8,26 @@ export const calculateFee = (data) => {
     dueDate
   } = data;
 
-  // Calculate subtotal
+
   const subtotal = rent + food + electricity + extra;
 
-  // Calculate attendance fine
+
   let attendanceFine = 0;
   if (attendancePercentage < 75) {
     const shortfall = 75 - attendancePercentage;
-    attendanceFine = shortfall * 10; // ₹10 per percent below 75
+    attendanceFine = shortfall * 10; 
   }
 
-  // Calculate late fine
+  
   let lateFine = 0;
   const today = new Date();
   const due = new Date(dueDate);
   if (today > due) {
     const daysLate = Math.floor((today - due) / (1000 * 60 * 60 * 24));
-    lateFine = daysLate * 20; // ₹20 per day late
+    lateFine = daysLate * 20; 
   }
 
-  // Calculate totals
+
   const totalAmount = subtotal + attendanceFine + lateFine;
 
   return {

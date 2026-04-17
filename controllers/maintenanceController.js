@@ -4,8 +4,7 @@ import User from '../models/User.js';
 import Student from '../models/Student.js';
 import Notification from '../models/Notification.js';
 
-// @desc    Create maintenance request
-// @route   POST /api/maintenance
+
 export const createMaintenanceRequest = async (req, res) => {
   try {
     console.log('📝 Creating maintenance request:', req.body);
@@ -20,7 +19,7 @@ export const createMaintenanceRequest = async (req, res) => {
       contactNumber
     } = req.body;
 
-    // Validate required fields
+   
     if (!title || !description || !type || !priority) {
       return res.status(400).json({
         success: false,
@@ -28,7 +27,7 @@ export const createMaintenanceRequest = async (req, res) => {
       });
     }
 
-    // Get the warden/hostel info
+   
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({
@@ -37,14 +36,14 @@ export const createMaintenanceRequest = async (req, res) => {
       });
     }
 
-    // Generate request number
+   
     const date = new Date();
     const year = date.getFullYear().toString().slice(-2);
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
     const requestNumber = `MNT${year}${month}${random}`;
 
-    // Create maintenance request
+  
     const maintenance = await Maintenance.create({
       requestNumber,
       title,
@@ -77,8 +76,7 @@ export const createMaintenanceRequest = async (req, res) => {
   }
 };
 
-// @desc    Get all maintenance requests
-// @route   GET /api/maintenance
+
 export const getMaintenanceRequests = async (req, res) => {
   try {
     const { status, priority, roomId } = req.query;
@@ -110,8 +108,7 @@ export const getMaintenanceRequests = async (req, res) => {
   }
 };
 
-// @desc    Get maintenance request by ID
-// @route   GET /api/maintenance/:id
+
 export const getMaintenanceById = async (req, res) => {
   try {
     const maintenance = await Maintenance.findById(req.params.id)
@@ -142,8 +139,7 @@ export const getMaintenanceById = async (req, res) => {
   }
 };
 
-// @desc    Update maintenance status
-// @route   PUT /api/maintenance/:id/status
+
 export const updateMaintenanceStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -180,8 +176,7 @@ export const updateMaintenanceStatus = async (req, res) => {
   }
 };
 
-// @desc    Assign maintenance to staff
-// @route   PUT /api/maintenance/:id/assign
+
 export const assignMaintenance = async (req, res) => {
   try {
     const { assignedTo } = req.body;
@@ -218,8 +213,7 @@ export const assignMaintenance = async (req, res) => {
   }
 };
 
-// @desc    Complete maintenance
-// @route   PUT /api/maintenance/:id/complete
+
 export const completeMaintenance = async (req, res) => {
   try {
     const { resolution, cost, timeSpent } = req.body;
@@ -258,8 +252,7 @@ export const completeMaintenance = async (req, res) => {
   }
 };
 
-// @desc    Add maintenance note
-// @route   POST /api/maintenance/:id/notes
+
 export const addMaintenanceNote = async (req, res) => {
   try {
     const { note } = req.body;
@@ -302,8 +295,7 @@ export const addMaintenanceNote = async (req, res) => {
   }
 };
 
-// @desc    Delete maintenance request
-// @route   DELETE /api/maintenance/:id
+
 export const deleteMaintenance = async (req, res) => {
   try {
     const maintenance = await Maintenance.findByIdAndDelete(req.params.id);
@@ -329,8 +321,7 @@ export const deleteMaintenance = async (req, res) => {
   }
 };
 
-// @desc    Get maintenance statistics
-// @route   GET /api/maintenance/stats
+
 export const getMaintenanceStats = async (req, res) => {
   try {
     const total = await Maintenance.countDocuments();
@@ -362,8 +353,7 @@ export const getMaintenanceStats = async (req, res) => {
   }
 };
 
-// @desc    Get maintenance history
-// @route   GET /api/maintenance/history
+
 export const getMaintenanceHistory = async (req, res) => {
   try {
     const { startDate, endDate, roomId } = req.query;

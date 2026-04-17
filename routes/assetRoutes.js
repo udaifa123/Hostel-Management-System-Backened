@@ -8,25 +8,34 @@ import {
   deleteAsset,
   assignAsset,
   markDamaged,
-  getAssetStats
+  getAssetStats,
+  getAssignments,
+  getAssignmentById,
+  replaceAsset,
+  returnAsset,
+  getReplacementHistory
 } from '../controllers/assetController.js';
 
 const router = express.Router();
 
-// All routes require authentication
+
 router.use(protect);
 
-// Allow both admin and warden to view assets
+
 router.get('/', authorize('admin', 'warden'), getAllAssets);
 router.get('/stats', authorize('admin', 'warden'), getAssetStats);
+router.get('/assignments', authorize('admin', 'warden'), getAssignments);
+router.get('/assignments/:id', authorize('admin', 'warden'), getAssignmentById);
+router.get('/replacement-history', authorize('admin', 'warden'), getReplacementHistory);
 router.get('/:id', authorize('admin', 'warden'), getAssetById);
 
-// Admin only routes (write operations)
 router.use(authorize('admin'));
 router.post('/', createAsset);
 router.put('/:id', updateAsset);
 router.delete('/:id', deleteAsset);
 router.post('/assign', assignAsset);
+router.post('/replace', replaceAsset);
+router.post('/return/:id', returnAsset);
 router.put('/damaged/:id', markDamaged);
 
 export default router;

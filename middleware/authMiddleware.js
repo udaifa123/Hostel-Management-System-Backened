@@ -24,7 +24,7 @@ export const protect = async (req, res, next) => {
 
     let account;
 
-    // 🔥 Important change here
+   
     if (decoded.role === "admin") {
       account = await Admin.findById(decoded.id).select("-password");
     } else {
@@ -58,7 +58,7 @@ export const authorize = (...roles) => {
       });
     }
 
-    // 🔥 Since Admin model doesn't have role field
+   
     const userRole = req.user.role || "admin";
 
     if (!roles.includes(userRole)) {

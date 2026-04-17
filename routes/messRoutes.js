@@ -13,18 +13,13 @@ import {
 
 const router = express.Router();
 
-// ✅ All routes need login
+
 router.use(protect);
 
-// =========================
-// 🔵 PARENT ROUTES
-// =========================
+
 router.get('/parent/menu', authorize('parent'), getWeeklyMenu);
 router.get('/parent/timings', authorize('parent'), getParentTimings);
 
-// =========================
-// 🟢 WARDEN ROUTES
-// =========================
 router.get('/menu', authorize('warden'), getMenu);
 router.post('/update', authorize('warden'), updateMenu);
 router.post('/copy', authorize('warden'), copyMenu);

@@ -1,7 +1,7 @@
 import Admin from "../models/Admin.js";
 import bcrypt from "bcryptjs";
 
-// Create default admin function
+
 export const createDefaultAdmin = async () => {
   try {
     const adminExists = await Admin.findOne({ email: "admin@hostel.com" });
@@ -22,5 +22,5 @@ export const createDefaultAdmin = async () => {
   }
 };
 
-// Also export as default if you want both ways
+
 export default createDefaultAdmin;

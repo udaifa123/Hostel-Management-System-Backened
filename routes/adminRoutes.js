@@ -1,4 +1,3 @@
-// routes/adminRoutes.js
 import express from "express";
 import {
   registerAdmin,
@@ -26,7 +25,7 @@ import {
   getVisitorStats
 } from "../controllers/adminController.js";
 
-// Import FEE functions from feeController.js (NOT from adminController)
+
 import {
   getAllFeesAdmin,
   generateFee,

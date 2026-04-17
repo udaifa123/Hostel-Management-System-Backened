@@ -7,11 +7,11 @@ import Room from "../models/Room.js";
 import Leave from "../models/Leave.js";
 import VisitRequest from "../models/VisitRequest.js";
 import Message from "../models/Message.js";
-import Parent from "../models/Parent.js";  // ✅ ADD THIS LINE - FIXES "Parent is not defined" ERROR
+import Parent from "../models/Parent.js";  
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-// ==================== DASHBOARD ====================
+
 
 export const getWardenDashboard = async (req, res) => {
   try {
@@ -103,7 +103,7 @@ export const getWardenDashboard = async (req, res) => {
   }
 };
 
-// ==================== STUDENT MANAGEMENT ====================
+
 
 export const getHostelStudents = async (req, res) => {
   try {
@@ -137,7 +137,7 @@ export const getHostelStudents = async (req, res) => {
   }
 };
 
-// ==================== CREATE STUDENT ====================
+
 export const createStudent = async (req, res) => {
   try {
     const {
@@ -160,7 +160,7 @@ export const createStudent = async (req, res) => {
 
     console.log("📝 Creating student with parents:", parents);
 
-    // Validation
+    
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
@@ -168,7 +168,7 @@ export const createStudent = async (req, res) => {
       });
     }
 
-    // Check if email already exists
+   
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -177,7 +177,7 @@ export const createStudent = async (req, res) => {
       });
     }
 
-    // Get warden and hostel
+   
     const warden = await User.findById(req.user.id).populate("hostel");
     if (!warden || !warden.hostel) {
       return res.status(400).json({
@@ -186,10 +186,10 @@ export const createStudent = async (req, res) => {
       });
     }
 
-    // Hash student password
+    
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create student user
+    
     const user = await User.create({
       name,
       email,
@@ -201,7 +201,7 @@ export const createStudent = async (req, res) => {
 
     console.log("✅ Student user created:", user.email);
 
-    // Room logic
+    
     let room = null;
     if (roomNumber) {
       room = await Room.findOne({
@@ -227,7 +227,7 @@ export const createStudent = async (req, res) => {
       }
     }
 
-    // Create student document
+  
     const student = await Student.create({
       user: user._id,
       registrationNumber: registrationNumber || `REG${Date.now()}`,
@@ -248,14 +248,14 @@ export const createStudent = async (req, res) => {
 
     console.log("✅ Student document created:", student._id);
 
-    // Update room occupants
+    
     if (room) {
       await Room.findByIdAndUpdate(room._id, {
         $addToSet: { occupants: user._id }
       });
     }
 
-    // ========== CREATE PARENT ACCOUNTS AND LINK ==========
+    
     const createdParents = [];
     const parentIds = [];
 
@@ -263,7 +263,7 @@ export const createStudent = async (req, res) => {
       console.log(`👨‍👩‍👧 Creating ${parents.length} parent(s)...`);
       
       for (const parent of parents) {
-        // Skip if no email provided
+       
         if (!parent.email) {
           console.log(`⚠️ Skipping parent ${parent.name}: No email provided`);
           continue;
@@ -271,15 +271,15 @@ export const createStudent = async (req, res) => {
 
         console.log(`📧 Creating parent: ${parent.email}`);
 
-        // Use phone number as password
+       
         const parentPassword = parent.phone || `parent${Math.floor(Math.random() * 10000)}`;
         const hashedParentPassword = await bcrypt.hash(parentPassword, 10);
 
-        // Check if parent user already exists
+        
         let parentUser = await User.findOne({ email: parent.email });
         
         if (!parentUser) {
-          // Create parent user
+         
           parentUser = await User.create({
             name: parent.name,
             email: parent.email,
@@ -302,7 +302,7 @@ export const createStudent = async (req, res) => {
           });
         } else {
           console.log(`📌 Parent already exists: ${parent.email}`);
-          // Add student to existing parent's students array
+          
           if (!parentUser.students) parentUser.students = [];
           if (!parentUser.students.includes(student._id)) {
             parentUser.students.push(student._id);
@@ -310,14 +310,14 @@ export const createStudent = async (req, res) => {
           }
         }
 
-      // Create or update Parent model
+    
 let parentProfile = await Parent.findOne({ user: parentUser._id });
 if (!parentProfile) {
   parentProfile = await Parent.create({
     user: parentUser._id,
     phone: parent.phone,
     students: [student._id],
-    relation: parent.relation || "",  // ✅ ADD THIS LINE
+    relation: parent.relation || "",  
     occupation: parent.occupation || "",
     address: parent.address || "",
     isPrimary: parent.isPrimary || false,
@@ -334,7 +334,7 @@ if (!parentProfile) {
         parentIds.push(parentUser._id);
       }
 
-      // Update student with parent references
+      
       if (parentIds.length > 0) {
         student.parents = parentIds;
         await student.save();
@@ -342,12 +342,12 @@ if (!parentProfile) {
       }
     }
 
-    // Populate student data for response
+    
     const populatedStudent = await Student.findById(student._id)
       .populate("user", "name email phone")
       .populate("room", "roomNumber block");
 
-    // Send response with parent login info
+    
     res.status(201).json({
       success: true,
       message: `Student created successfully with ${createdParents.length} parent(s) linked`,
@@ -370,7 +370,7 @@ if (!parentProfile) {
   }
 };
 
-// ==================== ATTENDANCE ====================
+
 
 export const markAttendance = async (req, res) => {
   try {
@@ -448,7 +448,7 @@ export const getAttendanceReport = async (req, res) => {
   }
 };
 
-// ==================== LEAVE MANAGEMENT ====================
+
 
 export const getPendingLeaves = async (req, res) => {
   try {
@@ -616,7 +616,7 @@ export const rejectLeave = async (req, res) => {
   }
 };
 
-// ==================== VISITOR MANAGEMENT ====================
+
 
 export const getPendingVisitors = async (req, res) => {
   try {
@@ -909,7 +909,6 @@ export const checkoutVisitor = async (req, res) => {
   }
 };
 
-// ==================== CHAT SYSTEM ====================
 
 export const getStudentMessages = async (req, res) => {
   try {
@@ -1008,7 +1007,7 @@ export const sendMessageToStudent = async (req, res) => {
   }
 };
 
-// ==================== GET COMPLAINTS ====================
+
 
 export const getComplaints = async (req, res) => {
   try {
@@ -1096,7 +1095,7 @@ export const updateComplaintStatus = async (req, res) => {
   }
 };
 
-// ==================== PROFILE MANAGEMENT ====================
+
 
 export const getWardenProfile = async (req, res) => {
   try {
@@ -1257,7 +1256,7 @@ export const changeWardenPassword = async (req, res) => {
   }
 };
 
-// ==================== SETTINGS MANAGEMENT ====================
+
 
 export const getWardenSettings = async (req, res) => {
   try {

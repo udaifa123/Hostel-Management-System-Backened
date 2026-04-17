@@ -1,8 +1,7 @@
-// models/VisitRequest.js
 import mongoose from 'mongoose';
 
 const visitRequestSchema = new mongoose.Schema({
-  // Parent details
+  
   parentId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
@@ -11,7 +10,7 @@ const visitRequestSchema = new mongoose.Schema({
     type: String
   },
   
-  // Student details
+  
   studentId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Student',
@@ -34,7 +33,7 @@ const visitRequestSchema = new mongoose.Schema({
     type: String
   },
   
-  // Visitor details
+  
   visitorName: {
     type: String,
     required: true
@@ -52,7 +51,7 @@ const visitRequestSchema = new mongoose.Schema({
     type: String
   },
   
-  // Visit details
+  
   visitDate: {
     type: Date,
     required: true
@@ -69,7 +68,7 @@ const visitRequestSchema = new mongoose.Schema({
     default: 1
   },
   
-  // Warden details
+ 
   wardenId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
@@ -78,7 +77,7 @@ const visitRequestSchema = new mongoose.Schema({
     type: String
   },
   
-  // Approval details
+
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected', 'cancelled', 'completed'],
@@ -96,7 +95,7 @@ const visitRequestSchema = new mongoose.Schema({
     endTime: String
   },
   
-  // Security details
+  
   gatePassId: {
     type: String,
     unique: true,
@@ -112,7 +111,7 @@ const visitRequestSchema = new mongoose.Schema({
     default: false
   },
   
-  // Request source
+ 
   requestedBy: {
     type: String,
     enum: ['student', 'parent'],
@@ -126,7 +125,7 @@ const visitRequestSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Generate gate pass ID only when approved
+
 visitRequestSchema.pre('save', function() {
   if (this.status === 'approved' && !this.gatePassId) {
     const date = new Date();
@@ -139,7 +138,6 @@ visitRequestSchema.pre('save', function() {
   }
 });
 
-// Drop the problematic index if it exists
-// Run this in MongoDB: db.visitrequests.dropIndex("requestNumber_1")
+
 
 export default mongoose.model('VisitRequest', visitRequestSchema);

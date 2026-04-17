@@ -1,4 +1,3 @@
-// models/Student.js - NO PRE-SAVE MIDDLEWARE
 import mongoose from "mongoose";
 
 const studentSchema = new mongoose.Schema(
@@ -248,7 +247,7 @@ const studentSchema = new mongoose.Schema(
     default: null
   },
 
-  // ✅ ADD THIS - Parent/Guardian references
+  
   parents: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: "User"
@@ -263,7 +262,7 @@ const studentSchema = new mongoose.Schema(
 { timestamps: true }
 );
 
-// NO PRE-SAVE MIDDLEWARE - REMOVED COMPLETELY
+
 
 const Student = mongoose.models.Student || mongoose.model("Student", studentSchema);
 

@@ -18,22 +18,22 @@ const paymentSchema = new mongoose.Schema({
   notes: String
 }, { 
   timestamps: true,
-  autoIndex: false,  // Prevent automatic index creation
-  autoCreate: false   // Prevent automatic collection creation
+  autoIndex: false,  
+  autoCreate: false   
 });
 
-// Ensure no indexes are created
+
 paymentSchema.index({});
 
 const Payment = mongoose.models.Payment || mongoose.model('Payment', paymentSchema);
 
-// Ensure the collection has no indexes when created
+
 (async () => {
   try {
     await Payment.collection.dropIndexes();
     console.log('✅ Dropped all indexes on payments collection');
   } catch(e) {
-    // Collection might not exist yet
+    
   }
 })();
 

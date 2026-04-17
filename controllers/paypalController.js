@@ -5,7 +5,7 @@ const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
 const PAYPAL_API_URL = 'https://api-m.sandbox.paypal.com';
 
-// Get PayPal access token
+
 const getAccessToken = async () => {
   try {
     const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString('base64');
@@ -26,7 +26,7 @@ const getAccessToken = async () => {
   }
 };
 
-// Create PayPal Order
+
 export const createOrder = async (req, res) => {
   try {
     const { amount, feeId, month, year, studentName } = req.body;
@@ -102,7 +102,7 @@ export const createOrder = async (req, res) => {
   }
 };
 
-// Capture PayPal Payment
+
 export const captureOrder = async (req, res) => {
   try {
     const { orderId, feeId, amount, studentId, studentName } = req.body;
@@ -144,7 +144,7 @@ export const captureOrder = async (req, res) => {
       
       console.log(`✅ Payment received: ₹${paidAmount}`);
       
-      // Update fee
+      
       fee.paidAmount = (fee.paidAmount || 0) + paidAmount;
       fee.dueAmount = (fee.totalAmount || fee.amount) - fee.paidAmount;
       fee.status = fee.dueAmount <= 0 ? 'paid' : 'partial';

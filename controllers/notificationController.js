@@ -1,7 +1,6 @@
-// controllers/notificationController.js
 import Notification from '../models/Notification.js';
 
-// Get user's notifications with pagination and filtering
+
 export const getNotifications = async (req, res) => {
   try {
     const { page = 1, limit = 20, type, unreadOnly } = req.query;
@@ -49,7 +48,7 @@ export const getNotifications = async (req, res) => {
   }
 };
 
-// Get unread count only (for real-time updates)
+
 export const getUnreadCount = async (req, res) => {
   try {
     const count = await Notification.countDocuments({
@@ -62,7 +61,7 @@ export const getUnreadCount = async (req, res) => {
   }
 };
 
-// Mark notification as read with socket emit
+
 export const markAsRead = async (req, res) => {
   try {
     const notification = await Notification.findByIdAndUpdate(
@@ -75,7 +74,7 @@ export const markAsRead = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Notification not found' });
     }
     
-    // Emit socket event for real-time update
+    
     const io = req.app.get('io');
     if (io) {
       io.to(`user_${notification.recipient}`).emit('notification_read', notification._id);
@@ -88,7 +87,7 @@ export const markAsRead = async (req, res) => {
   }
 };
 
-// Mark all as read with socket emit
+
 export const markAllAsRead = async (req, res) => {
   try {
     const result = await Notification.updateMany(
@@ -96,7 +95,7 @@ export const markAllAsRead = async (req, res) => {
       { isRead: true, readAt: new Date() }
     );
     
-    // Emit socket event for real-time update
+    
     const io = req.app.get('io');
     if (io) {
       io.to(`user_${req.user.id}`).emit('all_notifications_read');
@@ -151,7 +150,7 @@ export const deleteAllRead = async (req, res) => {
   }
 };
 
-// Helper function to create and send notification (for other controllers)
+
 export const createNotification = async (recipientId, notificationData, io) => {
   try {
     const notification = new Notification({
@@ -172,7 +171,7 @@ export const createNotification = async (recipientId, notificationData, io) => {
     await notification.save();
     await notification.populate('sender', 'name email avatar');
     
-    // Emit real-time notification via socket
+
     if (io) {
       io.to(`user_${recipientId}`).emit('new_notification', notification);
       console.log(`📢 Real-time notification sent to user ${recipientId}: ${notification.title}`);
@@ -185,7 +184,7 @@ export const createNotification = async (recipientId, notificationData, io) => {
   }
 };
 
-// Create notification for multiple recipients
+
 export const createBulkNotifications = async (recipientIds, notificationData, io) => {
   try {
     const notifications = [];
@@ -208,7 +207,7 @@ export const createBulkNotifications = async (recipientIds, notificationData, io
       await notification.populate('sender', 'name email avatar');
       notifications.push(notification);
       
-      // Emit to each recipient
+    
       if (io) {
         io.to(`user_${recipientId}`).emit('new_notification', notification);
       }

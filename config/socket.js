@@ -12,7 +12,7 @@ const initializeSocket = (server) => {
     }
   });
 
-  // Authentication middleware
+  
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth.token;
@@ -37,13 +37,13 @@ const initializeSocket = (server) => {
   io.on('connection', (socket) => {
     console.log(`User connected: ${socket.user.name} (${socket.user.role})`);
 
-    // Join user to personal room
+    
     socket.join(`user:${socket.user._id}`);
     
-    // Join role-based room
+
     socket.join(`role:${socket.user.role}`);
 
-    // Handle disconnection
+   
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.user.name}`);
     });

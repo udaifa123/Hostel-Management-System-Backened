@@ -43,7 +43,7 @@ const noticeSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes for better query performance
+
 noticeSchema.index({ createdAt: -1 });
 noticeSchema.index({ pinned: -1, createdAt: -1 });
 noticeSchema.index({ category: 1 });

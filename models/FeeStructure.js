@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const feeStructureSchema = new mongoose.Schema({
   name: { type: String, default: 'Default Fee Structure' },
   
-  // Fee Components
+
   tuitionFee: { type: Number, default: 10000 },
   hostelFee: { type: Number, default: 5000 },
   messFee: { type: Number, default: 3000 },
@@ -13,30 +13,30 @@ const feeStructureSchema = new mongoose.Schema({
   examFee: { type: Number, default: 1000 },
   otherFee: { type: Number, default: 0 },
   
-  // Fee Type
+  
   feeType: { type: String, enum: ['monthly', 'quarterly', 'semester', 'yearly'], default: 'monthly' },
   dueDayOfMonth: { type: Number, default: 10 },
   
-  // Fine Settings
+  
   finePerDay: { type: Number, default: 10 },
   fineType: { type: String, enum: ['per_day', 'percentage'], default: 'per_day' },
   finePercentage: { type: Number, default: 2 },
   maxFine: { type: Number, default: 5000 },
   
-  // Attendance Rules
+  
   enableAttendancePenalty: { type: Boolean, default: true },
   attendanceThreshold: { type: Number, default: 75 },
   attendancePenaltyPercentage: { type: Number, default: 5 },
   
-  // Discount Rules
+ 
   enableDiscount: { type: Boolean, default: true },
   earlyPaymentDiscount: { type: Number, default: 5 },
   earlyPaymentDays: { type: Number, default: 5 },
   
-  // Scholarship
+
   scholarshipPercentage: { type: Number, default: 0 },
   
-  // Auto Generation
+ 
   autoGenerate: { type: Boolean, default: true },
   lastGeneratedMonth: { type: Number, default: 0 },
   lastGeneratedYear: { type: Number, default: 0 },

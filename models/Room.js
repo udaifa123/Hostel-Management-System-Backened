@@ -47,7 +47,7 @@ const roomSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Ensure room numbers are unique per hostel
+
 roomSchema.index({ roomNumber: 1, block: 1, hostel: 1 }, { unique: true });
 
 const Room = mongoose.models.Room || mongoose.model('Room', roomSchema);

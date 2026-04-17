@@ -4,9 +4,7 @@ import MenuHistory from "../models/MenuHistory.js";
 import Parent from "../models/Parent.js";
 import Student from "../models/Student.js";
 
-// @desc    Get current menu
-// @route   GET /api/mess/menu
-// @access  Private (Warden only)
+
 export const getMenu = async (req, res) => {
   try {
     const warden = await User.findById(req.user.id).populate('hostel');
@@ -52,9 +50,7 @@ export const getMenu = async (req, res) => {
   }
 };
 
-// @desc    Update menu
-// @route   POST /api/mess/update
-// @access  Private (Warden only)
+
 export const updateMenu = async (req, res) => {
   try {
     const { day, meal, value, menu: updatedMenuData } = req.body;
@@ -137,9 +133,7 @@ export const updateMenu = async (req, res) => {
   }
 };
 
-// @desc    Copy menu from one day to another
-// @route   POST /api/mess/copy
-// @access  Private (Warden only)
+
 export const copyMenu = async (req, res) => {
   try {
     const { sourceDay, targetDay } = req.body;
@@ -202,9 +196,7 @@ export const copyMenu = async (req, res) => {
   }
 };
 
-// @desc    Clear day menu
-// @route   POST /api/mess/clear
-// @access  Private (Warden only)
+
 export const clearDay = async (req, res) => {
   try {
     const { day } = req.body;
@@ -263,9 +255,7 @@ export const clearDay = async (req, res) => {
   }
 };
 
-// @desc    Get menu history
-// @route   GET /api/mess/history
-// @access  Private (Warden only)
+
 export const getMenuHistory = async (req, res) => {
   try {
     const warden = await User.findById(req.user.id).populate('hostel');
@@ -296,9 +286,7 @@ export const getMenuHistory = async (req, res) => {
   }
 };
 
-// @desc    Update meal timings
-// @route   PUT /api/mess/timings
-// @access  Private (Warden only)
+
 export const updateTimings = async (req, res) => {
   try {
     const { breakfast, lunch, snacks, dinner } = req.body;
@@ -344,13 +332,13 @@ export const updateTimings = async (req, res) => {
   }
 };
 
-// ✅ FIXED - Get weekly menu for parents
+
 export const getWeeklyMenu = async (req, res) => {
   try {
     console.log("🍽️ Parent fetching weekly menu...");
     console.log("User ID:", req.user._id);
     
-    // Get parent with students
+   
     const parent = await Parent.findOne({ user: req.user._id })
       .populate({
         path: "students",
@@ -369,7 +357,7 @@ export const getWeeklyMenu = async (req, res) => {
       });
     }
 
-    // Get hostel from first student
+ 
     const firstStudent = parent.students[0];
     const hostelId = firstStudent.hostel?._id;
 
@@ -384,7 +372,7 @@ export const getWeeklyMenu = async (req, res) => {
 
     console.log("Hostel ID:", hostelId);
 
-    // Get menu for this hostel
+   
     const menu = await Menu.findOne({ hostel: hostelId });
 
     if (!menu || !menu.menu) {
@@ -398,7 +386,7 @@ export const getWeeklyMenu = async (req, res) => {
 
     console.log("Menu found, days:", Object.keys(menu.menu));
 
-    // Transform menu for frontend
+    
     const weekDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     const weeklyMenu = weekDays.map(day => ({
       day: day.charAt(0).toUpperCase() + day.slice(1),
@@ -422,7 +410,7 @@ export const getWeeklyMenu = async (req, res) => {
   }
 };
 
-// ✅ FIXED - Get meal timings for parents
+
 export const getParentTimings = async (req, res) => {
   try {
     console.log("⏰ Parent fetching timings...");

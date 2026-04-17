@@ -2,7 +2,6 @@ import Complaint from '../models/Complaint.js';
 import Student from '../models/Student.js';
 // import Notice from "../models/Notice.js";  
 
-// ... rest of your imports
 
 // Create complaint
 export const createComplaint = async (req, res) => {
@@ -35,7 +34,7 @@ export const createComplaint = async (req, res) => {
   }
 };
 
-// Get student's complaints
+
 export const getStudentComplaints = async (req, res) => {
   try {
     const student = await Student.findOne({ user: req.user.id });
@@ -90,7 +89,7 @@ export const getAllComplaints = async (req, res) => {
   }
 };
 
-// Update complaint status
+
 export const updateComplaintStatus = async (req, res) => {
   try {
     const complaint = await Complaint.findByIdAndUpdate(
@@ -113,7 +112,7 @@ export const updateComplaintStatus = async (req, res) => {
   }
 };
 
-// Assign complaint
+
 export const assignComplaint = async (req, res) => {
   try {
     const complaint = await Complaint.findByIdAndUpdate(
@@ -131,7 +130,7 @@ export const assignComplaint = async (req, res) => {
   }
 };
 
-// Add response
+
 export const addComplaintResponse = async (req, res) => {
   try {
     const complaint = await Complaint.findByIdAndUpdate(
@@ -149,7 +148,7 @@ export const addComplaintResponse = async (req, res) => {
   }
 };
 
-// Get complaint statistics
+
 export const getComplaintStatistics = async (req, res) => {
   try {
     const stats = await Complaint.aggregate([

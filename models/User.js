@@ -35,7 +35,7 @@ const userSchema = new mongoose.Schema(
     default: null
   },
 
-  // ✅ ADD THIS - For parents to track linked students
+  
   students: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: "Student"

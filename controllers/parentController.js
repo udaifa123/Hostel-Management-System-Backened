@@ -11,9 +11,9 @@ import User from "../models/User.js";
 import Message from "../models/Message.js";
 import Room from "../models/Room.js";
 import Hostel from "../models/Hostel.js";
-import Notice from "../models/Notice.js";  // ✅ ADD THIS IMPORT
+import Notice from "../models/Notice.js";  
 
-// ✅ GET DASHBOARD
+
 export const getDashboardSummary = async (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
@@ -54,7 +54,7 @@ export const getDashboardSummary = async (req, res) => {
       })
       .populate("hostel");
 
-    // Get today's attendance
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -65,7 +65,7 @@ export const getDashboardSummary = async (req, res) => {
       date: { $gte: today, $lt: tomorrow }
     });
 
-    // Get counts
+    
     const pendingLeaves = await Leave.countDocuments({
       student: studentId,
       status: 'pending'
@@ -76,7 +76,7 @@ export const getDashboardSummary = async (req, res) => {
       status: { $in: ['pending', 'in-progress'] }
     });
 
-    // Get fee summary
+   
     const fees = await Fee.find({ student: studentId });
     let totalFee = 0, paidFee = 0;
     fees.forEach(fee => {
@@ -84,13 +84,13 @@ export const getDashboardSummary = async (req, res) => {
       paidFee += fee.paidAmount || 0;
     });
 
-    // Get unread notifications
+   
     const unreadCount = await Notification.countDocuments({
       recipient: userId,
       isRead: false
     });
 
-    // Get pending visits
+    
     const pendingVisits = await VisitRequest.countDocuments({
       parentId: userId,
       status: 'pending'
@@ -124,7 +124,7 @@ export const getDashboardSummary = async (req, res) => {
   }
 };
 
-// ✅ GET STUDENT PROFILE
+
 export const getStudentProfile = async (req, res) => {
   try {
     const parent = await Parent.findOne({ user: req.user._id || req.user.id }).populate("students");
@@ -177,7 +177,7 @@ export const getStudentProfile = async (req, res) => {
   }
 };
 
-// ✅ UPDATE STUDENT PROFILE
+
 export const updateStudentProfile = async (req, res) => {
   try {
     const { name, phone, email, address, emergencyContact } = req.body;
@@ -198,7 +198,7 @@ export const updateStudentProfile = async (req, res) => {
       });
     }
     
-    // Update student fields
+    
     if (name) student.name = name;
     if (phone) student.phone = phone;
     if (email) student.email = email;
@@ -207,7 +207,7 @@ export const updateStudentProfile = async (req, res) => {
     
     await student.save();
     
-    // Also update user if needed
+    
     const user = await User.findById(student.userId);
     if (user) {
       if (name) user.name = name;
@@ -227,7 +227,7 @@ export const updateStudentProfile = async (req, res) => {
   }
 };
 
-// ✅ GET ATTENDANCE
+
 export const getAttendance = async (req, res) => {
   try {
     const { month, year } = req.query;
@@ -281,7 +281,7 @@ export const getAttendance = async (req, res) => {
   }
 };
 
-// ✅ GET LEAVES
+
 export const getLeaves = async (req, res) => {
   try {
     const parent = await Parent.findOne({ user: req.user._id || req.user.id });
@@ -329,7 +329,7 @@ export const getLeaves = async (req, res) => {
   }
 };
 
-// ✅ GET COMPLAINTS
+
 export const getComplaints = async (req, res) => {
   try {
     const parent = await Parent.findOne({ user: req.user._id || req.user.id });
@@ -364,7 +364,7 @@ export const getComplaints = async (req, res) => {
   }
 };
 
-// ✅ GET FEES
+
 export const getFees = async (req, res) => {
   try {
     const parent = await Parent.findOne({ user: req.user._id || req.user.id });
@@ -413,7 +413,7 @@ export const getFees = async (req, res) => {
 
 
 
-// ✅ GET CHILDREN'S FEES (For Parent Fees Page)
+
 export const getChildrenFees = async (req, res) => {
   try {
     console.log('🔵 Fetching children fees for parent');
@@ -435,7 +435,7 @@ export const getChildrenFees = async (req, res) => {
     for (const studentId of parent.students) {
       const student = await Student.findById(studentId);
       if (student) {
-        // Find fees using studentId field
+        
         const fees = await Fee.find({ studentId: student._id }).sort({ year: -1, month: -1 });
         
         console.log(`Found ${fees.length} fees for student ${student.name}`);
@@ -483,7 +483,7 @@ export const getChildrenFees = async (req, res) => {
   }
 };
 
-// ✅ GET NOTIFICATIONS
+
 export const getNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({ recipient: req.user._id || req.user.id })
@@ -505,7 +505,7 @@ export const getNotifications = async (req, res) => {
   }
 };
 
-// ✅ MARK NOTIFICATION AS READ
+
 export const markNotificationRead = async (req, res) => {
   try {
     const { id } = req.params;
@@ -532,7 +532,7 @@ export const markNotificationRead = async (req, res) => {
   }
 };
 
-// ✅ GET MESS MENU
+
 export const getMessMenu = async (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
@@ -547,12 +547,12 @@ export const getMessMenu = async (req, res) => {
       return res.json({ success: true, data: [] });
     }
 
-    // Get mess menu for this hostel
+   
     const menu = await MessMenu.find({ hostelId: student.hostel })
       .sort({ date: 1 })
       .limit(7);
 
-    // Format menu for frontend
+   
     const weeklyMenu = menu.map(item => ({
       _id: item._id,
       day: item.day,
@@ -576,10 +576,10 @@ export const getMessMenu = async (req, res) => {
   }
 };
 
-// ✅ GET MESS TIMINGS
+
 export const getMessTimings = async (req, res) => {
   try {
-    // Default timings
+   
     const timings = {
       breakfast: { start: '07:00', end: '09:00' },
       lunch: { start: '12:00', end: '14:00' },
@@ -597,8 +597,8 @@ export const getMessTimings = async (req, res) => {
   }
 };
 
-// ✅ CREATE VISIT REQUEST
-// ✅ CREATE VISIT REQUEST (FIXED - with all required fields)
+
+
 export const createVisitRequest = async (req, res) => {
   try {
     const { 
@@ -615,7 +615,7 @@ export const createVisitRequest = async (req, res) => {
       visitorName, relation, visitorPhone, visitDate, visitTime, purpose, numberOfVisitors 
     });
 
-    // Validate required fields
+  
     if (!visitorName || !relation || !visitorPhone || !visitDate) {
       return res.status(400).json({ 
         success: false, 
@@ -660,13 +660,11 @@ export const createVisitRequest = async (req, res) => {
       });
     }
 
-    // Get student name
     const studentName = student.user?.name || student.name || "Student";
     const studentRollNo = student.rollNumber || student.enrollmentNo || "N/A";
     const hostelName = student.hostel?.name || "N/A";
     const roomNumber = student.room?.roomNumber || "N/A";
 
-    // Find warden for this hostel
     let warden = null;
     if (student.hostel) {
       warden = await User.findOne({ 
@@ -675,13 +673,12 @@ export const createVisitRequest = async (req, res) => {
       });
     }
 
-    // Create visit request with ALL required fields
     const visitRequest = await VisitRequest.create({
-      // Parent details
+     
       parentId: userId,
       parentName: user.name,
       
-      // Student details
+      
       studentId: student._id,
       studentName: studentName,
       studentRollNo: studentRollNo,
@@ -689,22 +686,22 @@ export const createVisitRequest = async (req, res) => {
       hostelName: hostelName,
       roomNumber: roomNumber,
       
-      // Visitor details (from request body)
+      
       visitorName: visitorName,
       relation: relation,
       visitorPhone: visitorPhone,
       
-      // Visit details
+      
       visitDate: new Date(visitDate),
       visitTime: visitTime || null,
       purpose: purpose || 'General Visit',
       numberOfVisitors: numberOfVisitors || 1,
       
-      // Warden details
+      
       wardenId: warden?._id || null,
       wardenName: warden?.name || 'Not Assigned',
       
-      // Status
+     
       status: 'pending',
       requestedBy: 'parent',
       requestedAt: new Date()
@@ -712,7 +709,7 @@ export const createVisitRequest = async (req, res) => {
 
     console.log("✅ Visit request created:", visitRequest._id);
 
-    // Notify warden
+   
     if (warden) {
       await Notification.create({
         recipient: warden._id,
@@ -726,7 +723,7 @@ export const createVisitRequest = async (req, res) => {
       });
     }
 
-    // Notify student (optional)
+ 
     if (student.user) {
       await Notification.create({
         recipient: student.user._id,
@@ -754,8 +751,7 @@ export const createVisitRequest = async (req, res) => {
   }
 };
 
-// ✅ GET VISIT REQUESTS
-// ✅ GET VISIT REQUESTS (FIXED - returns proper array)
+
 export const getVisitRequests = async (req, res) => {
   try {
     const visits = await VisitRequest.find({ parentId: req.user._id || req.user.id })
@@ -772,7 +768,7 @@ export const getVisitRequests = async (req, res) => {
     res.json({
       success: true,
       data: {
-        visits: visits,  // Return visits array
+        visits: visits,  
         counts
       }
     });
@@ -786,7 +782,7 @@ export const getVisitRequests = async (req, res) => {
 };
 
 
-// ✅ CANCEL/DELETE VISIT REQUEST
+
 export const cancelVisit = async (req, res) => {
   try {
     const { id } = req.params;
@@ -800,7 +796,7 @@ export const cancelVisit = async (req, res) => {
       });
     }
     
-    // Check if the parent owns this visit
+   
     const parent = await Parent.findOne({ user: req.user._id || req.user.id });
     
     if (visit.parentId?.toString() !== (req.user._id || req.user.id).toString()) {
@@ -810,7 +806,7 @@ export const cancelVisit = async (req, res) => {
       });
     }
     
-    // If status is pending, mark as cancelled
+    
     if (visit.status === 'pending') {
       visit.status = 'cancelled';
       await visit.save();
@@ -821,7 +817,7 @@ export const cancelVisit = async (req, res) => {
       });
     }
     
-    // If status is rejected or cancelled, allow permanent deletion
+    
     if (visit.status === 'rejected' || visit.status === 'cancelled') {
       await VisitRequest.findByIdAndDelete(id);
       
@@ -844,7 +840,7 @@ export const cancelVisit = async (req, res) => {
   }
 };
 
-// ✅ SEND MESSAGE
+
 export const sendMessage = async (req, res) => {
   try {
     const { receiverId, content } = req.body;
@@ -883,7 +879,7 @@ export const sendMessage = async (req, res) => {
   }
 };
 
-// ✅ GET CHAT HISTORY
+
 export const getChatHistory = async (req, res) => {
   try {
     const { wardenId } = req.params;
@@ -917,7 +913,7 @@ export const getChatHistory = async (req, res) => {
   }
 };
 
-// ✅ GET WARDENS
+
 export const getWardens = async (req, res) => {
   try {
     const parent = await Parent.findOne({ user: req.user._id || req.user.id }).populate("students");
@@ -943,7 +939,7 @@ export const getWardens = async (req, res) => {
   }
 };
 
-// ✅ GET NOTICES (NEW - ADD THIS FUNCTION)
+
 export const getNotices = async (req, res) => {
   try {
     console.log("📋 Fetching notices for parent...");
@@ -963,7 +959,7 @@ export const getNotices = async (req, res) => {
     
     let query = { isActive: true };
     
-    // If student has a hostel, show notices for that hostel
+   
     if (student && student.hostel) {
       query.hostel = student.hostel;
     }

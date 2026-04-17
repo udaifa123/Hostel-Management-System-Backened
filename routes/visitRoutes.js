@@ -14,17 +14,17 @@ import {
 
 const router = express.Router();
 
-// All routes require authentication
+
 router.use(protect);
 
-// Student/Parent routes
+
 router.post('/', authorize('student', 'parent'), createVisitRequest);
 router.get('/my-visits', authorize('student', 'parent'), getStudentVisits);
 
-// Common routes
+
 router.get('/:id', getVisitDetails);
 
-// Warden/Admin routes
+
 router.get('/', authorize('admin', 'warden'), getAllVisits);
 router.put('/:id/approve', authorize('admin', 'warden'), approveVisit);
 router.put('/:id/reject', authorize('admin', 'warden'), rejectVisit);

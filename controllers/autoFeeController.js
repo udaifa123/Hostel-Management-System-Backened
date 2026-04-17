@@ -7,10 +7,10 @@ export const setFeeStructure = async (req, res) => {
   try {
     console.log('📝 Saving fee structure:', req.body);
     
-    // Delete all existing fee structures
+    
     await FeeStructure.deleteMany({});
     
-    // Create new fee structure
+   
     const feeStructure = new FeeStructure({
       tuitionFee: req.body.tuitionFee || 10000,
       hostelFee: req.body.hostelFee || 5000,

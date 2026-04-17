@@ -31,7 +31,7 @@ const conversationSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Ensure unique conversation between two users
+
 conversationSchema.index({ participants: 1 }, { unique: true });
 
 const Conversation = mongoose.models.Conversation || mongoose.model('Conversation', conversationSchema);

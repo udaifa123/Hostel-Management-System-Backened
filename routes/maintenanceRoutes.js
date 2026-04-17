@@ -15,11 +15,10 @@ import {
 
 const router = express.Router();
 
-// All routes require authentication
+
 router.use(protect);
 router.use(authorize('warden', 'admin'));
 
-// Main routes
 router.get('/', getMaintenanceRequests);
 router.get('/stats', getMaintenanceStats);
 router.get('/history', getMaintenanceHistory);

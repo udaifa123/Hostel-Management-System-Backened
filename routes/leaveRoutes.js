@@ -13,7 +13,7 @@ import {
 
 const router = express.Router();
 
-// All routes require authentication
+
 router.use(protect);
 
 // Student routes
@@ -21,7 +21,7 @@ router.post('/', authorize('student'), applyLeave);
 router.get('/my-leaves', authorize('student'), getStudentLeaves);
 router.put('/:id/cancel', authorize('student'), cancelLeave);
 
-// Common routes
+
 router.get('/:id', getLeaveDetails);
 
 // Admin/Warden routes

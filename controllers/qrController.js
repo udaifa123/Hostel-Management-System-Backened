@@ -6,7 +6,7 @@ import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import crypto from 'crypto';
 
-// Generate QR Code for attendance
+
 export const generateQRCode = async (req, res) => {
   try {
     const { expiryMinutes = 30, sessionName, roomId, hostelId } = req.body;
@@ -19,7 +19,7 @@ export const generateQRCode = async (req, res) => {
       });
     }
 
-    // Generate unique QR code data
+   
     const qrData = {
       id: crypto.randomBytes(16).toString('hex'),
       generatedBy: req.user.id,
@@ -29,7 +29,7 @@ export const generateQRCode = async (req, res) => {
       expiry: new Date(Date.now() + expiryMinutes * 60 * 1000)
     };
 
-    // Create QR code record in database
+    
     const qrRecord = await QRCodeModel.create({
       qrData: qrData.id,
       generatedBy: req.user.id,
@@ -43,7 +43,7 @@ export const generateQRCode = async (req, res) => {
       }
     });
 
-    // Generate QR code image
+    
     const qrCodeImage = await QRCode.toDataURL(JSON.stringify({
       id: qrData.id,
       type: 'attendance',
@@ -72,7 +72,7 @@ export const generateQRCode = async (req, res) => {
   }
 };
 
-// Scan QR Code and mark attendance
+
 export const scanQRCode = async (req, res) => {
   try {
     const { qrCode, studentId } = req.body;
@@ -84,16 +84,16 @@ export const scanQRCode = async (req, res) => {
       });
     }
 
-    // Parse QR data
+    
     let qrData;
     try {
       qrData = JSON.parse(qrCode);
     } catch (e) {
-      // If QR is not JSON, treat as string ID
+      
       qrData = { id: qrCode, type: 'attendance' };
     }
 
-    // Find QR record in database
+    
     const qrRecord = await QRCodeModel.findOne({
       qrData: qrData.id,
       isActive: true,
@@ -107,7 +107,7 @@ export const scanQRCode = async (req, res) => {
       });
     }
 
-    // Get student
+   
     const student = await Student.findById(studentId).populate('user');
     if (!student) {
       return res.status(404).json({
@@ -116,7 +116,7 @@ export const scanQRCode = async (req, res) => {
       });
     }
 
-    // Check if student belongs to the same hostel
+    
     if (student.hostel.toString() !== qrRecord.hostelId.toString()) {
       return res.status(403).json({
         success: false,
@@ -124,7 +124,6 @@ export const scanQRCode = async (req, res) => {
       });
     }
 
-    // Check if attendance already marked today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -142,7 +141,7 @@ export const scanQRCode = async (req, res) => {
       });
     }
 
-    // Mark attendance
+    
     const attendance = await Attendance.create({
       student: studentId,
       date: new Date(),
@@ -153,7 +152,6 @@ export const scanQRCode = async (req, res) => {
       qrCodeId: qrRecord._id
     });
 
-    // Update QR record usage
     qrRecord.usedBy.push({
       student: studentId,
       scannedAt: new Date(),
@@ -161,7 +159,6 @@ export const scanQRCode = async (req, res) => {
     });
     await qrRecord.save();
 
-    // Create notification for student
     await Notification.create({
       recipient: student.user._id,
       type: 'attendance',
@@ -188,7 +185,7 @@ export const scanQRCode = async (req, res) => {
   }
 };
 
-// Verify QR code validity
+
 export const verifyQRCode = async (req, res) => {
   try {
     const { qrCode } = req.params;
@@ -226,7 +223,7 @@ export const verifyQRCode = async (req, res) => {
   }
 };
 
-// Get QR scan history
+
 export const getQRHistory = async (req, res) => {
   try {
     const qrCodes = await QRCodeModel.find({
@@ -250,7 +247,7 @@ export const getQRHistory = async (req, res) => {
   }
 };
 
-// Get attendance marked via QR
+
 export const getAttendanceByQR = async (req, res) => {
   try {
     const attendance = await Attendance.find({

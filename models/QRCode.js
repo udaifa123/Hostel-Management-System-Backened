@@ -58,7 +58,7 @@ const qrCodeSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Auto deactivate expired QR codes
+
 qrCodeSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 const QRCode = mongoose.models.QRCode || mongoose.model('QRCode', qrCodeSchema);

@@ -10,13 +10,13 @@ const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
-// Ensure uploads directory exists
+
 const uploadDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Configure multer for file upload
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
@@ -31,7 +31,7 @@ const storage = multer.diskStorage({
 const upload = multer({ 
   storage,
   limits: { 
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+    fileSize: 5 * 1024 * 1024 
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx/;
@@ -46,7 +46,7 @@ const upload = multer({
   }
 });
 
-// Upload single file
+
 router.post('/', protect, upload.single('file'), (req, res) => {
   try {
     if (!req.file) {
@@ -69,7 +69,7 @@ router.post('/', protect, upload.single('file'), (req, res) => {
   }
 });
 
-// Upload multiple files
+
 router.post('/multiple', protect, upload.array('files', 5), (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
@@ -94,7 +94,7 @@ router.post('/multiple', protect, upload.array('files', 5), (req, res) => {
   }
 });
 
-// Delete file
+
 router.delete('/:filename', protect, (req, res) => {
   try {
     const filepath = path.join(uploadDir, req.params.filename);

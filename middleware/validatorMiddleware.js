@@ -11,7 +11,7 @@ export const validate = (req, res, next) => {
   next();
 };
 
-// Validation rules
+
 export const registerValidation = [
   body('name').notEmpty().withMessage('Name is required'),
   body('email').isEmail().withMessage('Valid email is required'),

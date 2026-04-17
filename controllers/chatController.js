@@ -3,14 +3,12 @@ import Conversation from '../models/Conversation.js';
 import User from '../models/User.js';
 import Parent from '../models/Parent.js';
 import Student from '../models/Student.js';
-// @desc    Send a message
-// @route   POST /api/chat/send
-// @access  Private
+
 export const sendMessage = async (req, res) => {
   try {
     const { receiverId, content, attachments } = req.body;
 
-    // Validation
+   
     if (!receiverId) {
       return res.status(400).json({
         success: false,
@@ -27,7 +25,7 @@ export const sendMessage = async (req, res) => {
 
     console.log(`📤 Sending message from ${req.user.id} to ${receiverId}`);
 
-    // Create message
+ 
     const message = await Message.create({
       sender: req.user.id,
       receiver: receiverId,
@@ -37,7 +35,7 @@ export const sendMessage = async (req, res) => {
       isRead: false
     });
 
-    // Find or create conversation
+  
     let conversation = await Conversation.findOne({
       participants: { $all: [req.user.id, receiverId] }
     });
@@ -50,21 +48,21 @@ export const sendMessage = async (req, res) => {
       console.log('✅ New conversation created');
     }
 
-    // Update conversation
+  
     conversation.lastMessage = message._id;
     conversation.lastMessageAt = new Date();
     
-    // Increment unread count for receiver
+  
     const currentCount = conversation.unreadCount.get(receiverId.toString()) || 0;
     conversation.unreadCount.set(receiverId.toString(), currentCount + 1);
     await conversation.save();
 
-    // Populate message with sender details
+    
     const populatedMessage = await Message.findById(message._id)
       .populate('sender', 'name email role')
       .populate('receiver', 'name email role');
 
-    // Emit socket event
+   
     const io = req.app.get('io');
     if (io) {
       io.to(`user:${receiverId}`).emit('new_message', populatedMessage);
@@ -85,9 +83,7 @@ export const sendMessage = async (req, res) => {
   }
 };
 
-// @desc    Get conversations for current user
-// @route   GET /api/chat/conversations
-// @access  Private
+
 export const getConversations = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -98,7 +94,7 @@ export const getConversations = async (req, res) => {
     let conversations = [];
 
     if (userRole === 'warden') {
-      // Get warden's hostel
+    
       const warden = await User.findById(userId).populate('hostel');
       
       if (!warden.hostel) {
@@ -108,7 +104,7 @@ export const getConversations = async (req, res) => {
         });
       }
 
-      // Get all students in warden's hostel
+      
       const students = await Student.find({ hostel: warden.hostel._id })
         .populate({
           path: 'user',
@@ -118,11 +114,11 @@ export const getConversations = async (req, res) => {
 
       console.log(`✅ Found ${students.length} students in hostel`);
 
-      // For each student, create a conversation object
+      
       for (const student of students) {
         if (!student.user) continue;
 
-        // Get last message between warden and this student
+        
         const lastMessage = await Message.findOne({
           $or: [
             { sender: userId, receiver: student.user._id },
@@ -133,7 +129,7 @@ export const getConversations = async (req, res) => {
         .populate('sender', 'name')
         .populate('receiver', 'name');
 
-        // Get unread count
+        
         const unreadCount = await Message.countDocuments({
           sender: student.user._id,
           receiver: userId,
@@ -156,7 +152,7 @@ export const getConversations = async (req, res) => {
         });
       }
     } else {
-      // For student - find warden
+      
       const student = await Student.findOne({ user: userId }).populate('hostel');
       
       if (student?.hostel) {
@@ -166,7 +162,7 @@ export const getConversations = async (req, res) => {
         }).select('name email');
 
         if (warden) {
-          // Get last message between student and warden
+         
           const lastMessage = await Message.findOne({
             $or: [
               { sender: userId, receiver: warden._id },
@@ -177,7 +173,7 @@ export const getConversations = async (req, res) => {
           .populate('sender', 'name')
           .populate('receiver', 'name');
 
-          // Get unread count
+        
           const unreadCount = await Message.countDocuments({
             sender: warden._id,
             receiver: userId,
@@ -200,7 +196,7 @@ export const getConversations = async (req, res) => {
       }
     }
 
-    // Sort by last message time (most recent first)
+    
     conversations.sort((a, b) => {
       if (!a.lastMessageAt) return 1;
       if (!b.lastMessageAt) return -1;
@@ -223,15 +219,13 @@ export const getConversations = async (req, res) => {
   }
 };
 
-// @desc    Get messages between two users
-// @route   GET /api/chat/messages/:userId
-// @access  Private
+
 export const getMessages = async (req, res) => {
   try {
     const { userId } = req.params;
     const { page = 1, limit = 50 } = req.query;
 
-    // Validation
+   
     if (!userId) {
       return res.status(400).json({
         success: false,
@@ -255,7 +249,7 @@ export const getMessages = async (req, res) => {
     .populate('receiver', 'name email role')
     .populate('replyTo');
 
-    // Mark messages as read
+   
     await Message.updateMany(
       {
         sender: userId,
@@ -268,7 +262,7 @@ export const getMessages = async (req, res) => {
       }
     );
 
-    // Update conversation unread count
+    
     const conversation = await Conversation.findOne({
       participants: { $all: [req.user.id, userId] }
     });
@@ -278,7 +272,7 @@ export const getMessages = async (req, res) => {
       await conversation.save();
     }
 
-    // Emit read receipts
+    
     const io = req.app.get('io');
     if (io) {
       io.to(`user:${userId}`).emit('messages_read', {
@@ -302,14 +296,12 @@ export const getMessages = async (req, res) => {
   }
 };
 
-// @desc    Mark messages as read
-// @route   PUT /api/chat/read/:userId
-// @access  Private
+
 export const markAsRead = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Validation
+  
     if (!userId) {
       return res.status(400).json({
         success: false,
@@ -360,15 +352,13 @@ export const markAsRead = async (req, res) => {
   }
 };
 
-// @desc    Delete a message
-// @route   DELETE /api/chat/message/:messageId
-// @access  Private
+
 export const deleteMessage = async (req, res) => {
   try {
     const { messageId } = req.params;
     const { deleteForEveryone } = req.body;
 
-    // Validation
+  
     if (!messageId) {
       return res.status(400).json({
         success: false,
@@ -422,9 +412,7 @@ export const deleteMessage = async (req, res) => {
   }
 };
 
-// @desc    Get online status of users
-// @route   GET /api/chat/online-status
-// @access  Private
+
 export const getOnlineStatus = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -433,7 +421,7 @@ export const getOnlineStatus = async (req, res) => {
     let users = [];
     
     if (userRole === 'warden') {
-      // Get warden's hostel
+      
       const warden = await User.findById(userId).populate('hostel');
       
       if (!warden.hostel) {
@@ -443,7 +431,7 @@ export const getOnlineStatus = async (req, res) => {
         });
       }
 
-      // Get all students in warden's hostel
+      
       const students = await Student.find({ hostel: warden.hostel._id })
         .populate('user', 'name email')
         .populate('room', 'roomNumber');
@@ -457,7 +445,7 @@ export const getOnlineStatus = async (req, res) => {
         rollNumber: s.rollNumber
       }));
     } else {
-      // For students, get warden info
+     
       const student = await Student.findOne({ user: userId }).populate('hostel');
       if (student?.hostel) {
         const wardenUser = await User.findOne({ 
@@ -490,9 +478,7 @@ export const getOnlineStatus = async (req, res) => {
   }
 };
 
-// @desc    Get warden for student
-// @route   GET /api/chat/warden
-// @access  Private
+
 export const getWarden = async (req, res) => {
   try {
     const warden = await User.findOne({ role: "warden" }).select("-password");
@@ -519,17 +505,12 @@ export const getWarden = async (req, res) => {
 };
 
 
-// Add these functions to your existing chatController.js
-
-// @desc    Get wardens for parent
-// @route   GET /api/chat/parent/wardens
-// @access  Private (Parent only)
 export const getWardensForParent = async (req, res) => {
   try {
     console.log("👥 Fetching wardens for parent...");
     console.log("User ID:", req.user.id);
     
-    // Get parent with students
+    
     const parent = await Parent.findOne({ user: req.user.id });
     
     if (!parent || !parent.students || parent.students.length === 0) {
@@ -541,7 +522,7 @@ export const getWardensForParent = async (req, res) => {
       });
     }
     
-    // Get students' hostel
+    
     const student = await Student.findById(parent.students[0]).populate('hostel');
     
     if (!student || !student.hostel) {
@@ -555,7 +536,7 @@ export const getWardensForParent = async (req, res) => {
     
     console.log("Student hostel:", student.hostel._id);
     
-    // Find warden for this hostel
+   
     const warden = await User.findOne({ 
       role: 'warden', 
       hostel: student.hostel._id,
@@ -572,8 +553,7 @@ export const getWardensForParent = async (req, res) => {
     }
     
     console.log("✅ Found warden:", warden.name);
-    
-    // Get last message for preview
+  
     const lastMessage = await Message.findOne({
       $or: [
         { sender: req.user.id, receiver: warden._id },
@@ -581,7 +561,7 @@ export const getWardensForParent = async (req, res) => {
       ]
     }).sort({ createdAt: -1 });
     
-    // Get unread count
+  
     const unreadCount = await Message.countDocuments({
       sender: warden._id,
       receiver: req.user.id,
@@ -610,9 +590,7 @@ export const getWardensForParent = async (req, res) => {
   }
 };
 
-// @desc    Get chat messages for parent with warden
-// @route   GET /api/chat/parent/chat/:wardenId
-// @access  Private (Parent only)
+
 export const getParentChatMessages = async (req, res) => {
   try {
     const { wardenId } = req.params;
@@ -629,7 +607,7 @@ export const getParentChatMessages = async (req, res) => {
     .populate('receiver', 'name email role')
     .sort({ createdAt: 1 });
     
-    // Mark messages as read
+    
     await Message.updateMany(
       { sender: wardenId, receiver: req.user.id, isRead: false },
       { isRead: true, readAt: new Date() }
@@ -648,9 +626,7 @@ export const getParentChatMessages = async (req, res) => {
   }
 };
 
-// @desc    Send message from parent to warden
-// @route   POST /api/chat/parent/send
-// @access  Private (Parent only)
+
 export const sendParentMessage = async (req, res) => {
   try {
     const { receiverId, content } = req.body;
@@ -685,7 +661,7 @@ export const sendParentMessage = async (req, res) => {
       .populate('sender', 'name email role')
       .populate('receiver', 'name email role');
     
-    // Emit socket event for real-time
+   
     const io = req.app.get('io');
     if (io) {
       io.to(`user_${receiverId}`).emit('new_message', populatedMessage);
@@ -709,15 +685,12 @@ export const sendParentMessage = async (req, res) => {
 
 // ==================== WARDEN CHAT FUNCTIONS ====================
 
-// @desc    Get conversations for warden (parents who messaged)
-// @route   GET /api/chat/warden/conversations
-// @access  Private (Warden only)
 export const getWardenConversations = async (req, res) => {
   try {
     const userId = req.user.id;
     console.log(`📋 Fetching conversations for warden ${userId}`);
 
-    // Get warden's hostel
+   
     const warden = await User.findById(userId).populate('hostel');
     
     if (!warden.hostel) {
@@ -727,11 +700,11 @@ export const getWardenConversations = async (req, res) => {
       });
     }
 
-    // Get all students in warden's hostel
+   
     const students = await Student.find({ hostel: warden.hostel._id });
     const studentIds = students.map(s => s._id);
 
-    // Get all parents linked to these students
+ 
     const parents = await Parent.find({ students: { $in: studentIds } })
       .populate('user', 'name email phone');
 
@@ -742,7 +715,7 @@ export const getWardenConversations = async (req, res) => {
     for (const parent of parents) {
       if (!parent.user) continue;
 
-      // Get last message between warden and this parent
+
       const lastMessage = await Message.findOne({
         $or: [
           { sender: userId, receiver: parent.user._id },
@@ -753,7 +726,7 @@ export const getWardenConversations = async (req, res) => {
       .populate('sender', 'name')
       .populate('receiver', 'name');
 
-      // Get unread count for warden
+     
       const unreadCount = await Message.countDocuments({
         sender: parent.user._id,
         receiver: userId,
@@ -775,7 +748,7 @@ export const getWardenConversations = async (req, res) => {
       });
     }
 
-    // Sort by last message time (most recent first)
+    
     conversations.sort((a, b) => {
       if (!a.lastMessageAt) return 1;
       if (!b.lastMessageAt) return -1;
@@ -798,9 +771,7 @@ export const getWardenConversations = async (req, res) => {
   }
 };
 
-// @desc    Get chat messages for warden with a specific parent
-// @route   GET /api/chat/warden/chat/:parentId
-// @access  Private (Warden only)
+
 export const getWardenChatMessages = async (req, res) => {
   try {
     const { parentId } = req.params;
@@ -819,7 +790,7 @@ export const getWardenChatMessages = async (req, res) => {
     .populate('sender', 'name email role')
     .populate('receiver', 'name email role');
 
-    // Mark messages as read
+    
     await Message.updateMany(
       {
         sender: parentId,
@@ -848,9 +819,6 @@ export const getWardenChatMessages = async (req, res) => {
   }
 };
 
-// @desc    Send message from warden to parent
-// @route   POST /api/chat/warden/send
-// @access  Private (Warden only)
 export const sendWardenMessage = async (req, res) => {
   try {
     const { receiverId, content } = req.body;
@@ -885,7 +853,7 @@ export const sendWardenMessage = async (req, res) => {
       .populate('sender', 'name email role')
       .populate('receiver', 'name email role');
     
-    // Emit socket event for real-time
+    
     const io = req.app.get('io');
     if (io) {
       io.to(`user_${receiverId}`).emit('new_message', populatedMessage);

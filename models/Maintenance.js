@@ -86,7 +86,7 @@ const maintenanceSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// ✅ FIXED: Auto generate request number (without using 'next' as parameter)
+
 maintenanceSchema.pre('save', function() {
   if (!this.requestNumber) {
     const date = new Date();

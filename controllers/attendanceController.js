@@ -3,17 +3,13 @@ import Student from "../models/Student.js";
 import User from "../models/User.js";
 
 // ==================== STUDENT ATTENDANCE ROUTES ====================
-
-// @desc    Get student's own attendance
-// @route   GET /api/student/attendance
-// @access  Private (Student only)
 export const getStudentAttendance = async (req, res) => {
   try {
     const { month, year } = req.query;
     
     console.log(`📋 Fetching attendance for student ${req.user.id} - Month: ${month}, Year: ${year}`);
     
-    // Find student
+   
     const student = await Student.findOne({ user: req.user.id });
     if (!student) {
       return res.status(404).json({ 
@@ -23,25 +19,25 @@ export const getStudentAttendance = async (req, res) => {
       });
     }
     
-    // Build date range
+    
     let startDate, endDate;
     const now = new Date();
     
     if (month && year) {
-      // Get specific month
+  
       startDate = new Date(year, month - 1, 1);
       endDate = new Date(year, month, 0);
     } else {
-      // Get current month
+      
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     }
     
-    // Set time boundaries
+    
     startDate.setHours(0, 0, 0, 0);
     endDate.setHours(23, 59, 59, 999);
     
-    // Find attendance records
+    
     const attendanceRecords = await Attendance.find({
       student: student._id,
       date: { $gte: startDate, $lte: endDate }
@@ -50,7 +46,7 @@ export const getStudentAttendance = async (req, res) => {
     
     console.log(`✅ Found ${attendanceRecords.length} attendance records for student ${student.name || student._id}`);
     
-    // Format response
+    
     const formattedRecords = attendanceRecords.map(record => ({
       _id: record._id,
       date: record.date,
@@ -81,10 +77,6 @@ export const getStudentAttendance = async (req, res) => {
 };
 
 // ==================== ADMIN DASHBOARD ROUTES ====================
-
-// @desc    Get attendance statistics for dashboard
-// @route   GET /api/admin/attendance/stats
-// @access  Private (Admin only)
 export const getAttendanceStats = async (req, res) => {
   try {
     console.log('📊 Fetching attendance statistics...');
@@ -94,10 +86,10 @@ export const getAttendanceStats = async (req, res) => {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Get total students across all hostels
+    
     const totalStudents = await Student.countDocuments();
     
-    // Get today's attendance
+ 
     const todayAttendance = await Attendance.find({
       date: { $gte: today, $lt: tomorrow }
     });
@@ -107,12 +99,12 @@ export const getAttendanceStats = async (req, res) => {
     const lateToday = todayAttendance.filter(a => a.status === 'late').length;
     const halfDayToday = todayAttendance.filter(a => a.status === 'half-day').length;
     
-    // Calculate attendance rate
+    
     const attendanceRate = totalStudents > 0 
       ? ((presentToday / totalStudents) * 100).toFixed(1) 
       : 0;
 
-    // Get weekly stats (last 7 days)
+    
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay() + 1);
     startOfWeek.setHours(0, 0, 0, 0);
@@ -178,9 +170,7 @@ export const getAttendanceStats = async (req, res) => {
   }
 };
 
-// @desc    Get weekly attendance for charts
-// @route   GET /api/admin/attendance/weekly
-// @access  Private (Admin only)
+
 export const getWeeklyAttendance = async (req, res) => {
   try {
     console.log('📊 Fetching weekly attendance data...');
@@ -202,7 +192,7 @@ export const getWeeklyAttendance = async (req, res) => {
       });
       
       const dayIndex = date.getDay();
-      // Convert Sunday (0) to index 6 for display
+     
       const displayIndex = dayIndex === 0 ? 6 : dayIndex - 1;
       
       weeklyData.push({
@@ -227,9 +217,7 @@ export const getWeeklyAttendance = async (req, res) => {
   }
 };
 
-// @desc    Get monthly attendance for charts
-// @route   GET /api/admin/attendance/monthly
-// @access  Private (Admin only)
+
 export const getMonthlyAttendance = async (req, res) => {
   try {
     const { month, year } = req.query;
@@ -282,10 +270,6 @@ export const getMonthlyAttendance = async (req, res) => {
 };
 
 // ==================== WARDEN ATTENDANCE ROUTES ====================
-
-// @desc    Get attendance for a specific date
-// @route   GET /api/attendance/:date
-// @access  Private (Warden only)
 export const getAttendanceByDate = async (req, res) => {
   try {
     const { date } = req.params;
@@ -306,10 +290,9 @@ export const getAttendanceByDate = async (req, res) => {
       });
     }
 
-    // Get all students
+
     const students = await Student.find({ hostel: warden.hostel._id });
 
-    // Get attendance records
     const attendanceRecords = await Attendance.find({
       student: { $in: students.map(s => s._id) },
       date: { $gte: startDate, $lte: endDate }
@@ -345,9 +328,7 @@ export const getAttendanceByDate = async (req, res) => {
   }
 };
 
-// @desc    Mark attendance for multiple students
-// @route   POST /api/attendance/mark
-// @access  Private (Warden only)
+
 export const markAttendance = async (req, res) => {
   try {
     const { attendance } = req.body;
@@ -442,9 +423,7 @@ export const markAttendance = async (req, res) => {
   }
 };
 
-// @desc    Get attendance for a specific student (Warden view)
-// @route   GET /api/attendance/student/:studentId
-// @access  Private (Warden only)
+
 export const getWardenStudentAttendance = async (req, res) => {
   try {
     const { studentId } = req.params;
@@ -510,9 +489,7 @@ export const getWardenStudentAttendance = async (req, res) => {
   }
 };
 
-// @desc    Mark attendance via QR code
-// @route   POST /api/attendance/qr
-// @access  Private (Warden only)
+
 export const markAttendanceByQR = async (req, res) => {
   try {
     const { qrData } = req.body;
