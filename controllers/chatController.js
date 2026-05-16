@@ -8,7 +8,7 @@ export const sendMessage = async (req, res) => {
   try {
     const { receiverId, content, attachments } = req.body;
 
-   
+    // Validation
     if (!receiverId) {
       return res.status(400).json({
         success: false,
@@ -16,7 +16,7 @@ export const sendMessage = async (req, res) => {
       });
     }
 
-    if (!content) {
+    if (!content || !content.trim()) {
       return res.status(400).json({
         success: false,
         message: 'Message content is required'
@@ -24,65 +24,100 @@ export const sendMessage = async (req, res) => {
     }
 
     console.log(`📤 Sending message from ${req.user.id} to ${receiverId}`);
+    console.log(`Content: ${content}`);
 
- 
-    const message = await Message.create({
-      sender: req.user.id,
-      receiver: receiverId,
-      content,
-      attachments: attachments || [],
-      isDelivered: true,
-      isRead: false
-    });
-
-  
+    // STEP 1: Find or create conversation FIRST (before creating message)
     let conversation = await Conversation.findOne({
       participants: { $all: [req.user.id, receiverId] }
     });
 
     if (!conversation) {
-      conversation = await Conversation.create({
-        participants: [req.user.id, receiverId],
-        unreadCount: new Map()
-      });
-      console.log('✅ New conversation created');
+      console.log('No existing conversation found, creating new one...');
+      try {
+        conversation = await Conversation.create({
+          participants: [req.user.id, receiverId],
+          unreadCount: new Map()
+        });
+        console.log('✅ New conversation created:', conversation._id);
+      } catch (createError) {
+        // If duplicate key error, try to find the conversation again
+        if (createError.code === 11000) {
+          console.log('Duplicate key error, fetching existing conversation...');
+          conversation = await Conversation.findOne({
+            participants: { $all: [req.user.id, receiverId] }
+          });
+          if (!conversation) {
+            throw createError;
+          }
+        } else {
+          throw createError;
+        }
+      }
     }
 
-  
+    console.log(`Using conversation: ${conversation._id}`);
+
+    // STEP 2: Create the message
+    const message = await Message.create({
+      sender: req.user.id,
+      receiver: receiverId,
+      content: content.trim(),
+      attachments: attachments || [],
+      isDelivered: true,
+      isRead: false
+    });
+
+    console.log(`✅ Message created: ${message._id}`);
+
+    // STEP 3: Update conversation
     conversation.lastMessage = message._id;
     conversation.lastMessageAt = new Date();
     
-  
-    const currentCount = conversation.unreadCount.get(receiverId.toString()) || 0;
-    conversation.unreadCount.set(receiverId.toString(), currentCount + 1);
+    // Update unread count for receiver
+    const receiverIdStr = receiverId.toString();
+    const currentUnread = conversation.unreadCount.get(receiverIdStr) || 0;
+    conversation.unreadCount.set(receiverIdStr, currentUnread + 1);
+    
     await conversation.save();
 
-    
+    // STEP 4: Populate message with user details
     const populatedMessage = await Message.findById(message._id)
       .populate('sender', 'name email role')
       .populate('receiver', 'name email role');
 
-   
+    // STEP 5: Emit real-time events
     const io = req.app.get('io');
     if (io) {
       io.to(`user:${receiverId}`).emit('new_message', populatedMessage);
       io.to(`user:${req.user.id}`).emit('message_sent', populatedMessage);
+      console.log(`📡 Real-time events emitted to user:${receiverId}`);
     }
 
+    // STEP 6: Send response
     res.status(201).json({
       success: true,
       data: populatedMessage
     });
 
   } catch (error) {
-    console.error('Error sending message:', error);
+    console.error('❌ Error in sendMessage:', error);
+    console.error('Error stack:', error.stack);
+    
+    // Handle specific error types
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'Conversation already exists. Please refresh and try again.',
+        code: 'DUPLICATE_CONVERSATION'
+      });
+    }
+    
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message || 'Failed to send message'
     });
   }
 };
-
 
 export const getConversations = async (req, res) => {
   try {
