@@ -54,21 +54,24 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://127.0.0.1:5173',
-   'https://hostel-management-system-frontend-ten.vercel.app/',,
+   'https://hostel-management-system-frontend-ten.vercel.app/',
   process.env.FRONTEND_URL
 ].filter(Boolean);
 
 app.use(cors({
-  origin: function(origin, callback) {
+  origin: (origin, callback) => {
+    console.log("🌐 Incoming origin:", origin);
+
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-      callback(null, true);
-    } else {
-      callback(new Error('CORS not allowed'));
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
     }
+
+    return callback(new Error("❌ CORS blocked: " + origin));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
