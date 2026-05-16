@@ -54,6 +54,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://127.0.0.1:5173',
+  'https://hostel-management-system-frontend-u.vercel.app',
   'https://hostel-management-system-frontend-u.vercel.app/',
   process.env.FRONTEND_URL
 ].filter(Boolean);
