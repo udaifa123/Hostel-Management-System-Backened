@@ -9,13 +9,30 @@ import { initializeSocket } from './socket/index.js';
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-console.log('📁 Environment:');
-console.log('PORT:', process.env.PORT);
-console.log('MONGO_URI:', process.env.MONGO_URI ? '✅ Found' : '❌ Missing');
-console.log('JWT_SECRET:', process.env.JWT_SECRET ? '✅ Found' : '❌ Missing');
+const app = express();
+const httpServer = createServer(app);
 
+// ✅ SOCKET
+const io = initializeSocket(httpServer);
+app.set('io', io);
 
+// ✅ 🔥 FIXED CORS (IMPORTANT CHANGE)
+app.use(cors({
+  origin: true,   // allow all origins
+  credentials: true
+}));
+
+// ✅ BODY PARSER
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// ✅ STATIC
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// ✅ ROUTES
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import studentRoutes from './routes/studentRoutes.js';
@@ -34,75 +51,20 @@ import messRoutes from './routes/messRoutes.js';
 import qrRoutes from './routes/qrRoutes.js';
 import maintenanceRoutes from './routes/maintenanceRoutes.js';
 import paypalRoutes from './routes/paypalRoutes.js';
-// import feeCron from './cron/feeCron.js'; 
 import autoFeeRoutes from './routes/autoFeeRoutes.js';
 import autoFeeCron from './cron/autoFeeCron.js';
 import assetRoutes from './routes/assetRoutes.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const app = express();
-const httpServer = createServer(app);
-
-
-const io = initializeSocket(httpServer);
-app.set('io', io);
-
-
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://127.0.0.1:5173',
-   'https://hostel-management-system-frontend-ten.vercel.app',
-  process.env.FRONTEND_URL
-].filter(Boolean);
-
-app.use(cors({
-  origin: (origin, callback) => {
-    console.log("🌐 Incoming origin:", origin);
-
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    return callback(new Error("❌ CORS blocked: " + origin));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-
+// ✅ TEST ROUTES
 app.get('/', (req, res) => {
-  res.json({ 
-    message: '🏠 Hostel Management API',
-    version: '2.0.0',
-    status: 'active',
-    cors: 'enabled'
-  });
+  res.json({ message: 'API Working ✅' });
 });
-
 
 app.get('/health', (req, res) => {
-  res.json({
-    status: 'OK',
-    timestamp: new Date(),
-    uptime: process.uptime(),
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    mongodb: process.env.MONGO_URI ? 'configured' : 'missing'
-  });
+  res.json({ status: 'OK' });
 });
 
-
+// ✅ API ROUTES
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/student', studentRoutes);
@@ -120,65 +82,42 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/mess', messRoutes);
 app.use('/api/qr', qrRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
-app.use('/api/paypal', paypalRoutes); 
+app.use('/api/paypal', paypalRoutes);
 app.use('/api/assets', assetRoutes);
-
-
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 app.use('/api/auto-fee', autoFeeRoutes);
 
-// feeCron.init();
-
+// ✅ CRON
 autoFeeCron.init();
 
+// ✅ 404
 app.use((req, res) => {
-  res.status(404).json({ 
-    success: false, 
-    message: `Route ${req.method} ${req.url} not found` 
-  });
-});
-
-
-app.use((err, req, res, next) => {
-  console.error('❌ Global error:', err);
-  console.error('Stack:', err.stack);
-  
-  res.status(err.status || 500).json({
+  res.status(404).json({
     success: false,
-    message: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { 
-      stack: err.stack,
-      url: req.url,
-      method: req.method 
-    })
+    message: `Route ${req.method} ${req.url} not found`
   });
 });
 
+// ✅ ERROR HANDLER
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({
+    success: false,
+    message: err.message
+  });
+});
 
-const MONGO_URI = process.env.MONGO_URI;
-
-if (!MONGO_URI) {
-  console.error('❌ MONGO_URI is not defined in .env file');
-  process.exit(1);
-}
-
-console.log('📡 Connecting to MongoDB...');
-
-mongoose.connect(MONGO_URI)
+// ✅ DB CONNECT
+mongoose.connect(process.env.MONGO_URI)
   .then(() => {
-    console.log('✅ MongoDB connected successfully');
-    
+    console.log('MongoDB Connected ✅');
+
     const PORT = process.env.PORT || 4000;
-    httpServer.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
-      console.log(`✅ CORS enabled for: ${allowedOrigins.join(', ')}`);
+    httpServer.listen(PORT, () => {
+      console.log(`Server running on ${PORT} 🚀`);
     });
   })
   .catch(err => {
-    console.error('❌ MongoDB connection error:', err.message);
-    process.exit(1);
+    console.error('DB Error ❌', err);
   });
 
 export default app;
